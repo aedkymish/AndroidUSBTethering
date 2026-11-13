@@ -8,11 +8,18 @@ system security:
 
 | Mode | What you get | Requirements |
 |---|---|---|
-| **DriverKit network driver** (recommended) | A real Ethernet interface (`enX`) in System Settings → Network. macOS itself handles DHCP, IPv6, DNS, Bonjour and service order. | Apple-approved DriverKit entitlements (see [Driver entitlements](#driver-entitlements)) |
-| **User-space fallback** | A `utun` interface with DHCP, SLAAC (IPv6), routes and DNS run by the helper | Nothing extra |
+| **User-space driver** (default build) | A `utun` interface with DHCP, SLAAC (IPv6), routes and DNS run by the helper | A free Apple ID is enough |
+| **DriverKit network driver** (optional build) | A real Ethernet interface (`enX`) in System Settings → Network. macOS itself handles DHCP, IPv6, DNS, Bonjour and service order. | Paid Apple Developer Program + Apple-approved DriverKit entitlements (see [Driver entitlements](#driver-entitlements)) |
 
-If the driver extension is installed, it claims the phone first. Otherwise the helper falls back to
-the user-space driver after a short grace period.
+The project has two app targets (schemes):
+
+| Scheme | Contains | Signing |
+|---|---|---|
+| `AndroidUSBTethering` | App + user-space helper | Free Apple ID ("Personal Team") |
+| `AndroidUSBTetheringDriverKit` | App + helper + DriverKit driver | Paid membership; Personal Teams cannot use the System Extension capability |
+
+In the DriverKit build, the driver claims the phone first. If it isn't installed, the helper uses the
+user-space driver after a short grace period.
 
 > **Status:** early development (v0.1.0). The protocol logic is unit-tested, but the app has not yet
 > been validated end-to-end on many phone models. Please report results in the Issues.
@@ -51,7 +58,9 @@ See [docs/architecture.md](docs/architecture.md) for the design (MVC, class diag
 - macOS 13 Ventura or later (Apple Silicon or Intel)
 - Xcode 15 or later
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
-- An Apple Developer ID to sign and notarize the app for distribution
+- An Apple ID added to Xcode (Settings → Accounts). A free account is enough for the default build.
+- A paid Apple Developer Program membership only for the DriverKit build or for notarized
+  distribution
 
 ## Building
 
@@ -67,8 +76,16 @@ xcodegen generate
 open AndroidUSBTethering.xcodeproj
 ```
 
-Set your team in `project.yml` (`DEVELOPMENT_TEAM`) or in Xcode's *Signing & Capabilities*, then build
-and run the `AndroidUSBTethering` scheme.
+In Xcode:
+
+1. Select the **`AndroidUSBTethering`** scheme (not `AndroidUSBTetheringDriverKit`).
+2. For both the `AndroidUSBTethering` and `AndroidUSBTetheringHelper` targets, open *Signing &
+   Capabilities* and choose your team ("Your Name (Personal Team)" works). To avoid doing this after
+   each `xcodegen generate`, put your Team ID in `DEVELOPMENT_TEAM` in `project.yml`.
+3. Build with **Product → Archive**, or build and copy `AndroidUSBTethering.app` to `/Applications`,
+   then open it from there.
+
+If the bundle identifier is already taken for your team, change `com.aedkymish` in `project.yml`.
 
 Build and test the core library without Xcode:
 
@@ -84,7 +101,7 @@ swift test
 
 1. Launch the app. A cable icon appears in the menu bar.
 2. Click **Install Helper** and approve it in **System Settings → General → Login Items**.
-3. Optional (recommended): click **Install Network Driver** and allow it in **System Settings →
+3. DriverKit build only: click **Install Network Driver** and allow it in **System Settings →
    General → Login Items & Extensions → Driver Extensions**. The app must be in `/Applications`.
 4. Connect the phone with a USB cable and turn on **Settings → Network & internet → Hotspot &
    tethering → USB tethering** on the phone.

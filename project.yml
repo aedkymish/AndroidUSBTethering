@@ -17,11 +17,11 @@ settings:
     ENABLE_HARDENED_RUNTIME: YES
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
-    DEVELOPMENT_TEAM: ""          # set your Apple Developer Team ID
+    DEVELOPMENT_TEAM: ""          # your Team ID (a free "Personal Team" works for the default build)
     CODE_SIGN_STYLE: Automatic
 
-targets:
-  AndroidUSBTethering:
+targetTemplates:
+  MenuBarApp:
     type: application
     platform: macOS
     sources:
@@ -41,9 +41,6 @@ targets:
         codeSign: true
         copy:
           destination: executables
-      - target: AndroidRNDISDriver
-        embed: true
-        codeSign: true
     info:
       path: App/Resources/Info.plist
       properties:
@@ -51,12 +48,29 @@ targets:
         LSUIElement: true
         LSMinimumSystemVersion: "13.0"
         NSHumanReadableCopyright: "Copyright © 2026 Ali Edkymish"
-    entitlements:
-      path: App/Resources/AndroidUSBTethering.entitlements
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.aedkymish.AndroidUSBTethering
         PRODUCT_NAME: AndroidUSBTethering
+
+targets:
+  # Default build: user-space driver only. Needs no special entitlements, so it signs with a
+  # free Apple ID ("Personal Team").
+  AndroidUSBTethering:
+    templates: [MenuBarApp]
+    entitlements:
+      path: App/Resources/AndroidUSBTethering.entitlements
+
+  # Optional build that also embeds the DriverKit network driver. Requires a paid Apple Developer
+  # Program membership and the DriverKit entitlements (see README → Driver entitlements).
+  AndroidUSBTetheringDriverKit:
+    templates: [MenuBarApp]
+    dependencies:
+      - target: AndroidRNDISDriver
+        embed: true
+        codeSign: true
+    entitlements:
+      path: App/Resources/AndroidUSBTethering-DriverKit.entitlements
 
   AndroidUSBTetheringHelper:
     type: tool

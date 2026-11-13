@@ -4,6 +4,8 @@ import TetheringCore
 
 /// Installation state of the DriverKit network driver.
 enum DriverInstallState: Equatable {
+    /// This build does not embed the driver (default build for free Apple IDs).
+    case notBundled
     case unknown
     case notInstalled
     /// Waiting for the user to allow it in System Settings.
@@ -23,12 +25,21 @@ final class DriverExtensionManager: NSObject, OSSystemExtensionRequestDelegate {
 
     private let identifier = DriverKitDetector.driverBundleIdentifier
 
+    /// Whether this app build embeds the driver extension (only the "DriverKit" build does).
+    var isBundled: Bool {
+        let url = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Library/SystemExtensions/\(identifier).dext")
+        return FileManager.default.fileExists(atPath: url.path)
+    }
+
     /// Queries the current state without changing anything.
     func refresh() {
+        guard isBundled else { onStateChange?(.notBundled); return }
         submit(.propertiesRequest(forExtensionWithIdentifier: identifier, queue: .main))
     }
 
     func activate() {
+        guard isBundled else { onStateChange?(.notBundled); return }
         guard Bundle.main.bundleURL.path.hasPrefix("/Applications/") else {
             onStateChange?(.requiresApplicationsFolder)
             return

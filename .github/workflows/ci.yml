@@ -39,11 +39,17 @@ jobs:
         run: brew install xcodegen
       - name: Generate project
         run: xcodegen generate
-      - name: Build
+      - name: Build default app (no DriverKit)
         run: |
           xcodebuild -project AndroidUSBTethering.xcodeproj \
             -scheme AndroidUSBTethering -configuration Debug \
             -destination 'platform=macOS' \
             -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
-      - name: Show app bundle layout
-        run: find build/Build/Products/Debug/AndroidUSBTethering.app/Contents -maxdepth 3 | sort
+          ! test -e build/Build/Products/Debug/AndroidUSBTethering.app/Contents/Library/SystemExtensions
+      - name: Build DriverKit app
+        run: |
+          xcodebuild -project AndroidUSBTethering.xcodeproj \
+            -scheme AndroidUSBTetheringDriverKit -configuration Debug \
+            -destination 'platform=macOS' \
+            -derivedDataPath build-dk CODE_SIGNING_ALLOWED=NO build
+          find build-dk/Build/Products/Debug/AndroidUSBTethering.app/Contents -maxdepth 3 | sort

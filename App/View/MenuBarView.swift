@@ -40,6 +40,8 @@ struct MenuBarView: View {
     @ViewBuilder
     private var driverSection: some View {
         switch model.driverState {
+        case .notBundled:
+            EmptyView()
         case .activated:
             Label("Network driver active", systemImage: "checkmark.seal")
                 .font(.caption)
