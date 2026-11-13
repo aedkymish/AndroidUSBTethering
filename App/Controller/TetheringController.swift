@@ -68,6 +68,12 @@ final class TetheringController: ObservableObject {
         apply(options: options, autoConnect: model.status.autoConnect)
     }
 
+    func setEnableIPv6(_ value: Bool) {
+        var options = model.status.options
+        options.enableIPv6 = value
+        apply(options: options, autoConnect: model.status.autoConnect)
+    }
+
     func setAutoConnect(_ value: Bool) {
         apply(options: model.status.options, autoConnect: value)
     }

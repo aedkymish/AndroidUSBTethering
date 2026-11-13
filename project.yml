@@ -47,7 +47,7 @@ targets:
         CFBundleDisplayName: Android USB Tethering
         LSUIElement: true
         LSMinimumSystemVersion: "13.0"
-        NSHumanReadableCopyright: "Copyright © 2026 aedkymish"
+        NSHumanReadableCopyright: "Copyright © 2026 Ali Edkymish"
     entitlements:
       path: App/Resources/AndroidUSBTethering.entitlements
     settings:

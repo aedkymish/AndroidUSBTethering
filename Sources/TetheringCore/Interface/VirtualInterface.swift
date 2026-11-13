@@ -26,11 +26,15 @@ public struct DHCPLease: Equatable, Codable {
 public protocol VirtualInterface: AnyObject {
     /// BSD interface name, e.g. `utun7`.
     var name: String { get }
-    /// Called for every IPv4 packet the macOS network stack sends through the interface.
+    /// Called for every IPv4 or IPv6 packet the macOS network stack sends through the interface.
     var onPacket: ((Data) -> Void)? { get set }
 
     func open() throws
     func configure(with lease: DHCPLease) throws
+    /// Adds the SLAAC address (prefix route included).
+    func configureIPv6(with configuration: IPv6Configuration) throws
+    /// Removes a previously added SLAAC address (best effort).
+    func removeIPv6(_ configuration: IPv6Configuration)
     func write(ipPacket: Data) throws
     func close()
 }

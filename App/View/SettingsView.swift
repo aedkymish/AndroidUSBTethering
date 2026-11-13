@@ -13,6 +13,8 @@ struct SettingsView: View {
                 get: { model.status.options.routeAllTraffic }, set: controller.setRouteAllTraffic))
             Toggle("Use the phone's DNS servers", isOn: Binding(
                 get: { model.status.options.usePhoneDNS }, set: controller.setUsePhoneDNS))
+            Toggle("Enable IPv6 (when the phone's network provides it)", isOn: Binding(
+                get: { model.status.options.enableIPv6 }, set: controller.setEnableIPv6))
             Text("Changes to routing and DNS apply to the next connection.")
                 .font(.caption)
                 .foregroundStyle(.secondary)

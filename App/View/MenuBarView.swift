@@ -45,12 +45,17 @@ struct MenuBarView: View {
                 GridRow { Text("Interface").foregroundStyle(.secondary); Text(info.interfaceName) }
                 GridRow { Text("IP address").foregroundStyle(.secondary); Text(info.address.description) }
                 GridRow { Text("Gateway").foregroundStyle(.secondary); Text(info.router.description) }
+                if let ipv6 = info.ipv6 {
+                    GridRow { Text("IPv6").foregroundStyle(.secondary); Text(ipv6.address.description) }
+                }
                 GridRow {
                     Text("DNS").foregroundStyle(.secondary)
-                    Text(info.dnsServers.map(\.description).joined(separator: ", "))
+                    Text((info.dnsServers.map(\.description) + (info.ipv6?.dnsServers.map(\.description) ?? []))
+                        .joined(separator: "\n"))
                 }
             }
             .font(.caption.monospaced())
+            .textSelection(.enabled)
             Button("Disconnect", action: controller.disconnect)
         } else if model.status.state.isActive {
             ProgressView().controlSize(.small)

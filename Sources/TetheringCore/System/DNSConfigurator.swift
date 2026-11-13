@@ -11,8 +11,10 @@ public final class DNSConfigurator {
         self.runner = runner
     }
 
-    public func apply(servers: [IPv4Address]) throws {
-        guard !servers.isEmpty else { return }
+    /// Publishes (or replaces) the DNS servers; IPv4 servers are listed first.
+    public func apply(ipv4: [IPv4Address], ipv6: [IPv6Address] = []) throws {
+        let servers = ipv4.map(\.description) + ipv6.map(\.description)
+        guard !servers.isEmpty else { return remove() }
         try runner.run("/usr/sbin/scutil", [], input: Self.script(for: servers))
         applied = true
     }
@@ -23,10 +25,10 @@ public final class DNSConfigurator {
         applied = false
     }
 
-    static func script(for servers: [IPv4Address]) -> String {
+    static func script(for servers: [String]) -> String {
         """
         d.init
-        d.add ServerAddresses * \(servers.map(\.description).joined(separator: " "))
+        d.add ServerAddresses * \(servers.joined(separator: " "))
         d.add SupplementalMatchDomains * ""
         set \(storeKey)
         quit

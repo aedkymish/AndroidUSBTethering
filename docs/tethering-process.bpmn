@@ -88,13 +88,18 @@
       <bpmn:errorEventDefinition errorRef="Error_LinkFailure" />
     </bpmn:boundaryEvent>
 
-    <bpmn:intermediateCatchEvent id="Catch_DeviceGone" name="Connected: bridge packets until detach / disconnect">
+    <bpmn:serviceTask id="Task_SLAAC" name="IPv6 SLAAC: Router Solicitation, apply Router Advertisement (optional)">
       <bpmn:incoming>Flow_Connected</bpmn:incoming>
+      <bpmn:outgoing>Flow_IPv6</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:intermediateCatchEvent id="Catch_DeviceGone" name="Connected: bridge packets until detach / disconnect">
+      <bpmn:incoming>Flow_IPv6</bpmn:incoming>
       <bpmn:outgoing>Flow_Teardown</bpmn:outgoing>
       <bpmn:messageEventDefinition messageRef="Message_DeviceGone" />
     </bpmn:intermediateCatchEvent>
 
-    <bpmn:serviceTask id="Task_Teardown" name="Release DHCP, remove routes / DNS, close utun and USB">
+    <bpmn:serviceTask id="Task_Teardown" name="Release DHCP, remove IPv4/IPv6 routes and DNS, close utun and USB">
       <bpmn:incoming>Flow_Teardown</bpmn:incoming>
       <bpmn:outgoing>Flow_Done</bpmn:outgoing>
     </bpmn:serviceTask>
@@ -118,7 +123,8 @@
     <bpmn:sequenceFlow id="Flow_None" name="No network function" sourceRef="Gateway_Protocol" targetRef="Task_EnableTethering" />
     <bpmn:sequenceFlow id="Flow_Retry" sourceRef="Task_EnableTethering" targetRef="Task_Identify" />
     <bpmn:sequenceFlow id="Flow_RNDIS" name="RNDIS" sourceRef="Gateway_Protocol" targetRef="SubProcess_BringUp" />
-    <bpmn:sequenceFlow id="Flow_Connected" sourceRef="SubProcess_BringUp" targetRef="Catch_DeviceGone" />
+    <bpmn:sequenceFlow id="Flow_Connected" sourceRef="SubProcess_BringUp" targetRef="Task_SLAAC" />
+    <bpmn:sequenceFlow id="Flow_IPv6" sourceRef="Task_SLAAC" targetRef="Catch_DeviceGone" />
     <bpmn:sequenceFlow id="Flow_Teardown" sourceRef="Catch_DeviceGone" targetRef="Task_Teardown" />
     <bpmn:sequenceFlow id="Flow_Done" sourceRef="Task_Teardown" targetRef="End_Done" />
     <bpmn:sequenceFlow id="Flow_Error" sourceRef="Boundary_LinkError" targetRef="Task_Rollback" />
@@ -174,14 +180,17 @@
       <bpmndi:BPMNShape id="Boundary_LinkError_di" bpmnElement="Boundary_LinkError">
         <dc:Bounds x="1100" y="262" width="36" height="36" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SLAAC_di" bpmnElement="Task_SLAAC">
+        <dc:Bounds x="1290" y="165" width="100" height="80" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Catch_DeviceGone_di" bpmnElement="Catch_DeviceGone">
-        <dc:Bounds x="1300" y="187" width="36" height="36" />
+        <dc:Bounds x="1430" y="187" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_Teardown_di" bpmnElement="Task_Teardown">
-        <dc:Bounds x="1390" y="165" width="100" height="80" />
+        <dc:Bounds x="1520" y="165" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="End_Done_di" bpmnElement="End_Done">
-        <dc:Bounds x="1540" y="187" width="36" height="36" />
+        <dc:Bounds x="1670" y="187" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_Rollback_di" bpmnElement="Task_Rollback">
         <dc:Bounds x="1068" y="340" width="100" height="80" />
@@ -231,13 +240,16 @@
         <di:waypoint x="1160" y="205" /><di:waypoint x="1190" y="205" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Connected_di" bpmnElement="Flow_Connected">
-        <di:waypoint x="1250" y="205" /><di:waypoint x="1300" y="205" />
+        <di:waypoint x="1250" y="205" /><di:waypoint x="1290" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_IPv6_di" bpmnElement="Flow_IPv6">
+        <di:waypoint x="1390" y="205" /><di:waypoint x="1430" y="205" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Teardown_di" bpmnElement="Flow_Teardown">
-        <di:waypoint x="1336" y="205" /><di:waypoint x="1390" y="205" />
+        <di:waypoint x="1466" y="205" /><di:waypoint x="1520" y="205" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Done_di" bpmnElement="Flow_Done">
-        <di:waypoint x="1490" y="205" /><di:waypoint x="1540" y="205" />
+        <di:waypoint x="1620" y="205" /><di:waypoint x="1670" y="205" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Error_di" bpmnElement="Flow_Error">
         <di:waypoint x="1118" y="298" /><di:waypoint x="1118" y="340" />

@@ -78,10 +78,19 @@ public final class UtunInterface: VirtualInterface {
         try commandRunner.run("/sbin/ifconfig", arguments)
     }
 
+    public func configureIPv6(with configuration: IPv6Configuration) throws {
+        try commandRunner.run("/sbin/ifconfig", [name, "inet6",
+                                                 "\(configuration.address)/\(configuration.prefixLength)", "alias"])
+    }
+
+    public func removeIPv6(_ configuration: IPv6Configuration) {
+        _ = try? commandRunner.run("/sbin/ifconfig", [name, "inet6", configuration.address.description, "-alias"])
+    }
+
     public func write(ipPacket: Data) throws {
-        guard fd >= 0 else { return }
+        guard fd >= 0, let version = IPVersion.of(ipPacket) else { return }
         var header = ByteWriter(capacity: Self.packetHeaderLength + ipPacket.count)
-        header.writeBE(UInt32(AF_INET))
+        header.writeBE(UInt32(version == 6 ? AF_INET6 : AF_INET))
         header.write(ipPacket)
         let packet = header.data
         let written = packet.withUnsafeBytes { Darwin.write(fd, $0.baseAddress, packet.count) }
@@ -116,7 +125,7 @@ public final class UtunInterface: VirtualInterface {
                 let count = read(descriptor, &buffer, capacity)
                 guard count > Self.packetHeaderLength else { break }
                 let family = UInt32(buffer[0]) << 24 | UInt32(buffer[1]) << 16 | UInt32(buffer[2]) << 8 | UInt32(buffer[3])
-                guard family == UInt32(AF_INET) else { continue } // IPv6 is not bridged yet
+                guard family == UInt32(AF_INET) || family == UInt32(AF_INET6) else { continue }
                 self?.onPacket?(Data(buffer[Self.packetHeaderLength..<count]))
             }
         }

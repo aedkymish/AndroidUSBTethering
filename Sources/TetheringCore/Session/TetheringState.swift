@@ -7,15 +7,18 @@ public struct ConnectionInfo: Equatable, Codable {
     public var address: IPv4Address
     public var router: IPv4Address
     public var dnsServers: [IPv4Address]
+    /// Present once the phone has advertised an IPv6 prefix.
+    public var ipv6: IPv6Configuration?
     public var since: Date
 
     public init(deviceName: String, interfaceName: String, address: IPv4Address, router: IPv4Address,
-                dnsServers: [IPv4Address], since: Date = Date()) {
+                dnsServers: [IPv4Address], ipv6: IPv6Configuration? = nil, since: Date = Date()) {
         self.deviceName = deviceName
         self.interfaceName = interfaceName
         self.address = address
         self.router = router
         self.dnsServers = dnsServers
+        self.ipv6 = ipv6
         self.since = since
     }
 }

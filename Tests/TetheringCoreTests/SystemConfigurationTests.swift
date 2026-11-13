@@ -24,9 +24,32 @@ final class SystemConfigurationTests: XCTestCase {
     }
 
     func testDNSScriptListsServers() {
-        let script = DNSConfigurator.script(for: [IPv4Address(192, 168, 42, 129), IPv4Address(8, 8, 8, 8)])
-        XCTAssertTrue(script.contains("d.add ServerAddresses * 192.168.42.129 8.8.8.8"))
+        let runner = RecordingRunner()
+        let dns = DNSConfigurator(runner: runner)
+        XCTAssertNoThrow(try dns.apply(ipv4: [IPv4Address(192, 168, 42, 129)], ipv6: [IPv6Address("2001:db8::1")!]))
+        let script = runner.calls.first?.2 ?? ""
+        XCTAssertTrue(script.contains("d.add ServerAddresses * 192.168.42.129 2001:db8::1"))
         XCTAssertTrue(script.contains("set \(DNSConfigurator.storeKey)"))
+    }
+
+    func testRouteManagerIPv6Routes() {
+        let runner = RecordingRunner()
+        let routes = RouteManager(runner: runner)
+        XCTAssertNoThrow(try routes.installIPv6(interface: "utun9", routeAllTraffic: true))
+        routes.removeAll()
+        XCTAssertEqual(runner.calls.map { $0.1 }, [
+            ["-q", "-n", "add", "-inet6", "::/1", "-interface", "utun9"],
+            ["-q", "-n", "add", "-inet6", "8000::/1", "-interface", "utun9"],
+            ["-q", "-n", "delete", "-inet6", "::/1", "-interface", "utun9"],
+            ["-q", "-n", "delete", "-inet6", "8000::/1", "-interface", "utun9"],
+        ])
+    }
+
+    func testOptionsDecodeSettingsFromOlderVersions() throws {
+        let old = Data(#"{"routeAllTraffic":false,"usePhoneDNS":true}"#.utf8)
+        let options = try JSONDecoder().decode(TetheringOptions.self, from: old)
+        XCTAssertFalse(options.routeAllTraffic)
+        XCTAssertTrue(options.enableIPv6)
     }
 
     func testDescriptorParserFindsRNDISDataInterface() {
