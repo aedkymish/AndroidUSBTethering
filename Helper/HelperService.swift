@@ -6,7 +6,10 @@ import TetheringCore
 /// XPC endpoint and coordinator for the privileged side.
 /// Owns the device monitor and at most one active `TetheringSession`.
 final class HelperService: NSObject, NSXPCListenerDelegate, TetheringHelperProtocol {
-    static let version = "0.1.0"
+    static let version = "0.2.0"
+    /// Time given to the DriverKit extension to claim a newly attached phone before the
+    /// user-space driver is used as a fallback.
+    static let driverKitGracePeriod: TimeInterval = 3
 
     private let queue = DispatchQueue(label: "AndroidUSBTethering.helper")
     private let log = Logger(subsystem: HelperConstants.machServiceName, category: "helper")
@@ -14,6 +17,8 @@ final class HelperService: NSObject, NSXPCListenerDelegate, TetheringHelperProto
     private lazy var monitor = USBDeviceMonitor(queue: queue)
     private var session: TetheringSession?
     private var status = HelperStatus()
+    /// Device currently handled by the DriverKit extension.
+    private var nativeDeviceID: UInt64?
 
     private enum Keys {
         static let options = "TetheringOptions"
@@ -56,13 +61,19 @@ final class HelperService: NSObject, NSXPCListenerDelegate, TetheringHelperProto
     // MARK: TetheringHelperProtocol
 
     func fetchStatus(reply: @escaping (Data) -> Void) {
-        queue.async { reply(self.status.encoded()) }
+        queue.async {
+            self.refreshNativeState()
+            reply(self.status.encoded())
+        }
     }
 
     func connect(deviceID: UInt64, reply: @escaping (String?) -> Void) {
         queue.async {
             guard let device = self.status.devices.first(where: { $0.id == deviceID }) else {
                 return reply("Device is no longer attached.")
+            }
+            if self.driverKitMatch(for: device) != nil {
+                return reply("This phone is handled by the network driver extension.")
             }
             reply(self.startSession(for: device))
         }
@@ -101,16 +112,54 @@ final class HelperService: NSObject, NSXPCListenerDelegate, TetheringHelperProto
         case .ncm:
             if session == nil { status.state = .nativeNCM(deviceName: device.name) }
         case .rndis:
-            if status.autoConnect, session == nil { _ = startSession(for: device) }
+            // Give the DriverKit extension the first chance; fall back to the user-space driver.
+            queue.asyncAfter(deadline: .now() + Self.driverKitGracePeriod) { [weak self] in
+                self?.evaluateRNDISDevice(device)
+            }
         }
     }
 
     private func deviceDetached(_ id: UInt64) {
         log.info("Detached: \(id)")
         status.devices.removeAll { $0.id == id }
+        if nativeDeviceID == id {
+            nativeDeviceID = nil
+            if session == nil { status.state = .idle }
+        }
         if status.activeDeviceID == id {
             stopSession()
         } else if session == nil, case .nativeNCM = status.state {
+            status.state = .idle
+        }
+    }
+
+    // MARK: DriverKit (on queue)
+
+    private func evaluateRNDISDevice(_ device: AndroidDevice) {
+        guard status.devices.contains(where: { $0.id == device.id }), session == nil else { return }
+        if let match = driverKitMatch(for: device) {
+            log.info("Handled by DriverKit extension (\(match.bsdName ?? "pending", privacy: .public))")
+            nativeDeviceID = device.id
+            status.state = .nativeEthernet(deviceName: device.name, interfaceName: match.bsdName)
+        } else if status.autoConnect {
+            _ = startSession(for: device)
+        }
+    }
+
+    private func driverKitMatch(for device: AndroidDevice) -> DriverKitDetector.Match? {
+        guard let service = monitor.service(for: device) else { return nil }
+        defer { IOObjectRelease(service) }
+        return DriverKitDetector.match(for: service)
+    }
+
+    /// Keeps the BSD name current (the interface appears shortly after the driver starts).
+    private func refreshNativeState() {
+        guard session == nil, let id = nativeDeviceID,
+              let device = status.devices.first(where: { $0.id == id }) else { return }
+        if let match = driverKitMatch(for: device) {
+            status.state = .nativeEthernet(deviceName: device.name, interfaceName: match.bsdName)
+        } else {
+            nativeDeviceID = nil
             status.state = .idle
         }
     }

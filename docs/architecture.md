@@ -1,14 +1,85 @@
 # Architecture
 
-Android USB Tethering is split into three deployable parts that follow **MVC** on the UI side and
+Android USB Tethering is split into four deployable parts that follow **MVC** on the UI side and
 **object-oriented, protocol-based design** in the core.
+
+## Two drivers
+
+| | DriverKit driver (`Driver/`) | User-space fallback (`Helper/` + `TetheringCore`) |
+|---|---|---|
+| Runs as | DriverKit extension (`.dext`), activated with `OSSystemExtensionRequest` | launchd daemon (root), registered with `SMAppService` |
+| Network interface | `IOUserNetworkEthernet`, a real `enX` | `utun` (layer 3) |
+| DHCP, IPv6, ARP/NDP, DNS, routes | macOS network stack | `DHCPClient`, `SLAACClient`, `ARPResolver`, `NeighborDiscovery`, `RouteManager`, `DNSConfigurator` |
+| RNDIS protocol | `rndis::` codec in C++ (`RNDISCodec.cpp`) | `RNDISMessage` / `RNDISTransport` in Swift |
+| Entitlements | DriverKit + networking + USB transport (Apple approval) | none |
+
+The DriverKit personality matches the RNDIS interface in the kernel, so the extension claims the
+phone first. `HelperService` waits `driverKitGracePeriod` (3 s) after a phone appears. It then asks
+`DriverKitDetector` whether an `AndroidRNDISDriver` object is attached below the interface:
+
+- If one is, the helper only reports `.nativeEthernet(deviceName:interfaceName:)`.
+- If not, it starts the user-space `TetheringSession`.
+
+### DriverKit driver classes
+
+```mermaid
+classDiagram
+    direction LR
+    class IOUserNetworkEthernet {
+        <<NetworkingDriverKit>>
+    }
+    class AndroidRNDISDriver {
+        +Start(provider)
+        +Stop(provider)
+        +TxPacketsAvailable(action)
+        +BulkInComplete(action, status, length, time)
+        +SetInterfaceEnable(bool)
+    }
+    class RNDISCodec {
+        <<namespace rndis>>
+        +buildInitialize() / buildQuery() / buildSet()
+        +parseControl()
+        +wrapPacket()
+        +findDataInterface()
+    }
+    class PacketIterator
+    class IOUSBHostInterface {
+        <<USBDriverKit>>
+    }
+    class IOUSBHostPipe {
+        <<USBDriverKit>>
+    }
+    class PacketQueues {
+        TxSubmission, TxCompletion
+        RxSubmission, RxCompletion
+    }
+    IOUserNetworkEthernet <|-- AndroidRNDISDriver
+    AndroidRNDISDriver ..> RNDISCodec
+    RNDISCodec *-- PacketIterator
+    AndroidRNDISDriver o-- IOUSBHostInterface : control + data
+    AndroidRNDISDriver o-- IOUSBHostPipe : bulk IN / OUT
+    AndroidRNDISDriver *-- PacketQueues
+```
+
+Driver data path:
+
+```
+TX: network stack ─► TxSubmissionQueue ─► rndis::wrapPacket ─► bulk OUT ─► TxCompletionQueue
+RX: bulk IN (AsyncIO) ─► rndis::PacketIterator ─► RxSubmissionQueue buffer ─► RxCompletionQueue ─► stack
+```
+
+The codec has no DriverKit dependencies, so `Driver/Tests/RNDISCodecTests.cpp` runs on any host.
+CI builds and runs those tests on every push.
 
 ```
 ┌─────────────── AndroidUSBTethering.app (user) ───────────────┐
+│  Contents/Library/SystemExtensions/…RNDISDriver.dext         │
+│  (activated with DriverExtensionManager, OSSystemExtension)  │
 │  Model       AppModel (ObservableObject), HelperInstallState │
 │  View        MenuBarView, SettingsView, MenuBarLabel         │
 │  Controller  TetheringController, HelperConnection,          │
-│              HelperInstaller (SMAppService)                  │
+│              HelperInstaller (SMAppService),                 │
+│              DriverExtensionManager (SystemExtensions)       │
 └──────────────────────────────┬───────────────────────────────┘
                                │ NSXPCConnection (.privileged)
                                │ TetheringHelperProtocol, JSON payloads
@@ -189,6 +260,8 @@ The session lifecycle is modelled in BPMN 2.0 in [`tethering-process.bpmn`](teth
 |---|---|
 | Identify interface class | `USBDeviceMonitor.makeDevice(from:)` |
 | Gateway "Tethering protocol?" | `HelperService.deviceAttached(_:)` |
+| Gateway "DriverKit extension claimed the phone?" | `HelperService.evaluateRNDISDevice(_:)`, `DriverKitDetector` |
+| AndroidRNDISDriver task | `Driver/AndroidRNDISDriver.cpp` → `.nativeEthernet` |
 | RNDIS INITIALIZE / Query MAC, set packet filter | `RNDISTransport.open()` → `.initializingLink` |
 | DHCP discover / request | `DHCPClient` → `.negotiatingDHCP` |
 | Create and configure utun, install routes and DNS | `TetheringSession.configureNetwork(with:)` → `.configuringNetwork` |
@@ -199,9 +272,8 @@ The session lifecycle is modelled in BPMN 2.0 in [`tethering-process.bpmn`](teth
 
 ## Roadmap
 
-1. **DriverKit**: replace `IOUSBHostChannel` + `UtunInterface` with a DEXT built on USBDriverKit and
-   NetworkingDriverKit. This needs Apple's `com.apple.developer.driverkit.family.networking`
-   entitlement and gives a real Ethernet interface (Bonjour, Network Settings integration).
+1. Validate the DriverKit driver on more phones; move to the newer NDK 22+ queue APIs
+   (`registerEthernetInterface`, poller-based queues) when dropping macOS 13.
 2. Duplicate Address Detection for the SLAAC address.
 3. Optional `adb` integration to switch on tethering from the Mac.
 4. Interrupt-endpoint notifications instead of polling `GET_ENCAPSULATED_RESPONSE`.

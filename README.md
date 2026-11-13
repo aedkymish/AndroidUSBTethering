@@ -3,13 +3,31 @@
 A macOS menu-bar app that lets a Mac use an Android phone's **USB tethering** connection.
 
 Most Android phones share their connection over USB using Microsoft **RNDIS**, which macOS does not
-support. This project adds a user-space RNDIS driver and a dual-stack (IPv4 + IPv6) network bridge,
-so no kernel extension and no reduced system security are needed.
+support. This project provides two drivers, neither of which needs a kernel extension or reduced
+system security:
+
+| Mode | What you get | Requirements |
+|---|---|---|
+| **DriverKit network driver** (recommended) | A real Ethernet interface (`enX`) in System Settings → Network. macOS itself handles DHCP, IPv6, DNS, Bonjour and service order. | Apple-approved DriverKit entitlements (see [Driver entitlements](#driver-entitlements)) |
+| **User-space fallback** | A `utun` interface with DHCP, SLAAC (IPv6), routes and DNS run by the helper | Nothing extra |
+
+If the driver extension is installed, it claims the phone first. Otherwise the helper falls back to
+the user-space driver after a short grace period.
 
 > **Status:** early development (v0.1.0). The protocol logic is unit-tested, but the app has not yet
 > been validated end-to-end on many phone models. Please report results in the Issues.
 
 ## How it works
+
+### DriverKit mode
+
+`AndroidRNDISDriver` (`Driver/`) is a DriverKit extension built on USBDriverKit and
+NetworkingDriverKit. It matches the phone's RNDIS interface, opens the paired CDC Data interface,
+performs the RNDIS handshake and registers an `IOUserNetworkEthernet` interface. Frames move between
+the networking stack's packet queues and the USB bulk endpoints, wrapped in RNDIS `PACKET_MSG`s.
+From then on macOS treats the phone like any USB Ethernet adapter.
+
+### User-space fallback
 
 1. A privileged helper (`launchd` daemon) watches for Android phones with USB tethering turned on.
 2. For an RNDIS phone it opens the USB interfaces with **IOUSBHost** and performs the RNDIS
@@ -66,9 +84,12 @@ swift test
 
 1. Launch the app. A cable icon appears in the menu bar.
 2. Click **Install Helper** and approve it in **System Settings → General → Login Items**.
-3. Connect the phone with a USB cable and turn on **Settings → Network & internet → Hotspot &
+3. Optional (recommended): click **Install Network Driver** and allow it in **System Settings →
+   General → Login Items & Extensions → Driver Extensions**. The app must be in `/Applications`.
+4. Connect the phone with a USB cable and turn on **Settings → Network & internet → Hotspot &
    tethering → USB tethering** on the phone.
-4. The app connects automatically, or click **Connect** in the menu.
+5. The app connects automatically, or click **Connect** in the menu. With the network driver, the
+   phone appears in System Settings → Network as an Ethernet service.
 
 Settings:
 
@@ -96,9 +117,48 @@ Sources/TetheringCore/
   XPC/                      App ⇄ helper contract (TetheringHelperProtocol)
 Tests/TetheringCoreTests/   Unit tests (mock phone, DHCP, ARP, NDP/SLAAC, bridge, descriptors)
 App/                        SwiftUI menu-bar app (Model / View / Controller)
+Driver/                     DriverKit extension: AndroidRNDISDriver (.iig/.cpp), portable RNDIS
+                            codec + C++ tests, Info.plist/entitlements generator
 Helper/                     Privileged launchd daemon + plist
 docs/                       Architecture, BPMN 2.0 model, protocol notes
 project.yml                 XcodeGen spec for the app and helper targets
+```
+
+## Driver entitlements
+
+A DriverKit extension only loads when it is signed with entitlements Apple grants on request at
+<https://developer.apple.com/contact/request/system-extension/>:
+
+| Entitlement | Purpose |
+|---|---|
+| `com.apple.developer.driverkit` | Run as a DriverKit extension |
+| `com.apple.developer.driverkit.family.networking` | Register a network interface |
+| `com.apple.developer.driverkit.transport.usb` | Access USB devices from the listed vendor IDs |
+| `com.apple.developer.system-extension.install` (app) | Let the app activate the extension |
+
+The vendor IDs (Google, Samsung, Xiaomi, OnePlus, Motorola and others) are listed once in
+`Driver/Scripts/generate_driver_plists.py`. That script writes both `Driver/Info.plist` (IOKit
+personalities) and `Driver/AndroidRNDISDriver.entitlements`. To add a vendor, edit `VENDORS` and run:
+
+```bash
+python3 Driver/Scripts/generate_driver_plists.py
+```
+
+For local development before the entitlements are approved, you can turn on developer mode for
+system extensions. This requires System Integrity Protection to be disabled on that test Mac:
+
+```bash
+systemextensionsctl developer on
+```
+
+Check the driver's state and logs:
+
+```bash
+systemextensionsctl list
+```
+
+```bash
+log stream --predicate 'sender == "com.aedkymish.AndroidUSBTethering.RNDISDriver"'
 ```
 
 ## Known limitations
@@ -107,8 +167,10 @@ project.yml                 XcodeGen spec for the app and helper targets
   network has IPv6. DHCPv6 is not used (Android tethering does not offer it).
 - Duplicate Address Detection is skipped for the SLAAC address. The address uses a random 64-bit
   interface identifier, so collisions are extremely unlikely.
-- `utun` is a layer-3 interface, so the link does not appear as an Ethernet service in System
-  Settings. A DriverKit (`IOUserNetworkEthernet`) backend is on the roadmap.
+- The DriverKit driver has been compiled against the macOS SDK but not yet tested on real phones.
+  Please report results.
+- In user-space mode the link is a layer-3 `utun` interface, so it does not appear as an Ethernet
+  service in System Settings. Use the DriverKit driver for that.
 - Turning on tethering still has to be done on the phone.
 
 ## Troubleshooting

@@ -41,6 +41,9 @@ targets:
         codeSign: true
         copy:
           destination: executables
+      - target: AndroidRNDISDriver
+        embed: true
+        codeSign: true
     info:
       path: App/Resources/Info.plist
       properties:
@@ -69,3 +72,29 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.aedkymish.AndroidUSBTethering.helper
         PRODUCT_NAME: AndroidUSBTetheringHelper
         SKIP_INSTALL: YES
+
+  AndroidRNDISDriver:
+    type: driver-extension
+    platform: macOS
+    sources:
+      - path: Driver
+        excludes:
+          - "Tests/**"
+          - "Scripts/**"
+          - "Info.plist"
+          - "*.entitlements"
+    entitlements:
+      path: Driver/AndroidRNDISDriver.entitlements
+    settings:
+      base:
+        SDKROOT: driverkit
+        DRIVERKIT_DEPLOYMENT_TARGET: "22.0"
+        PRODUCT_BUNDLE_IDENTIFIER: com.aedkymish.AndroidUSBTethering.RNDISDriver
+        PRODUCT_NAME: com.aedkymish.AndroidUSBTethering.RNDISDriver
+        INFOPLIST_FILE: Driver/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CLANG_CXX_LANGUAGE_STANDARD: c++17
+        # The classic IOUserNetworkEthernet controller API is marked deprecated but is the one
+        # whose pure-virtual methods every Ethernet dext must implement.
+        WARNING_CFLAGS: "-Wno-deprecated-declarations"
+        OTHER_LDFLAGS: "-framework DriverKit -framework NetworkingDriverKit -framework USBDriverKit"

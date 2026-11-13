@@ -38,9 +38,39 @@ struct MenuBarView: View {
     }
 
     @ViewBuilder
+    private var driverSection: some View {
+        switch model.driverState {
+        case .activated:
+            Label("Network driver active", systemImage: "checkmark.seal")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .awaitingApproval:
+            helperPrompt("Allow the network driver in System Settings → General → Login Items & Extensions → Driver Extensions.",
+                         action: "Open System Settings", perform: controller.openApprovalSettings)
+        case .activating:
+            ProgressView("Installing network driver…").controlSize(.small)
+        case .requiresApplicationsFolder:
+            Text("Move the app to the Applications folder to install the network driver.")
+                .font(.caption)
+                .foregroundStyle(.orange)
+        case let .failed(message):
+            helperPrompt("Network driver: \(message)", action: "Try Again", perform: controller.installDriver)
+        case .notInstalled, .unknown:
+            helperPrompt("Install the network driver to get a native Ethernet interface (recommended).",
+                         action: "Install Network Driver", perform: controller.installDriver)
+        }
+    }
+
+    @ViewBuilder
     private var statusSection: some View {
+        driverSection
         Label(model.status.state.summary, systemImage: model.menuBarSymbol)
-        if let info = model.connectionInfo {
+        if let native = model.nativeEthernet {
+            Text("macOS manages \(native.interfaceName ?? "the interface") like any Ethernet adapter. See System Settings → Network.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else if let info = model.connectionInfo {
             Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 4) {
                 GridRow { Text("Interface").foregroundStyle(.secondary); Text(info.interfaceName) }
                 GridRow { Text("IP address").foregroundStyle(.secondary); Text(info.address.description) }

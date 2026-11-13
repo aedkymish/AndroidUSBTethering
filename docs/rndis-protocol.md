@@ -1,5 +1,8 @@
 # RNDIS protocol notes
 
+Both drivers implement this protocol: in Swift (`Sources/TetheringCore/RNDIS/`) and in portable C++
+for the DriverKit extension (`Driver/RNDISCodec.cpp`).
+
 Reference: Microsoft *[MS-RNDIS]: Remote Network Driver Interface Specification*. All fields are
 32-bit little-endian.
 

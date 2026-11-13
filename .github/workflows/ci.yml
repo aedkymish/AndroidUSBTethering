@@ -2,7 +2,6 @@ name: CI
 
 on:
   push:
-    branches: [main]
   pull_request:
 
 jobs:
@@ -18,8 +17,19 @@ jobs:
       - name: Test
         run: swift test
 
+  driver-codec:
+    name: DriverKit RNDIS codec (C++ tests)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -I Driver \
+            Driver/RNDISCodec.cpp Driver/Tests/RNDISCodecTests.cpp -o codec-tests
+          ./codec-tests
+
   app:
-    name: App + Helper (xcodebuild)
+    name: App + Helper + Driver (xcodebuild)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,4 +44,6 @@ jobs:
           xcodebuild -project AndroidUSBTethering.xcodeproj \
             -scheme AndroidUSBTethering -configuration Debug \
             -destination 'platform=macOS' \
-            CODE_SIGNING_ALLOWED=NO build
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+      - name: Show app bundle layout
+        run: find build/Build/Products/Debug/AndroidUSBTethering.app/Contents -maxdepth 3 | sort

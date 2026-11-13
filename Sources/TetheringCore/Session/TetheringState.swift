@@ -32,12 +32,15 @@ public enum TetheringState: Equatable, Codable {
     case connected(ConnectionInfo)
     /// The phone uses CDC-NCM, which macOS drives natively.
     case nativeNCM(deviceName: String)
+    /// The DriverKit extension owns the phone and exposes it as a native Ethernet interface;
+    /// macOS configures DHCP, IPv6, DNS and routing itself.
+    case nativeEthernet(deviceName: String, interfaceName: String?)
     case failed(message: String)
 
     public var isActive: Bool {
         switch self {
         case .initializingLink, .negotiatingDHCP, .configuringNetwork, .connected: return true
-        case .idle, .nativeNCM, .failed: return false
+        case .idle, .nativeNCM, .nativeEthernet, .failed: return false
         }
     }
 
@@ -49,6 +52,8 @@ public enum TetheringState: Equatable, Codable {
         case .configuringNetwork: return "Configuring network…"
         case let .connected(info): return "Connected via \(info.deviceName)"
         case let .nativeNCM(name): return "\(name) uses NCM (handled by macOS)"
+        case let .nativeEthernet(name, interface):
+            return "Connected via \(name) (Ethernet\(interface.map { " " + $0 } ?? ""))"
         case let .failed(message): return "Error: \(message)"
         }
     }

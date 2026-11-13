@@ -15,7 +15,10 @@ struct SettingsView: View {
                 get: { model.status.options.usePhoneDNS }, set: controller.setUsePhoneDNS))
             Toggle("Enable IPv6 (when the phone's network provides it)", isOn: Binding(
                 get: { model.status.options.enableIPv6 }, set: controller.setEnableIPv6))
-            Text("Changes to routing and DNS apply to the next connection.")
+            if model.driverState == .activated {
+                Button("Uninstall Network Driver", action: controller.uninstallDriver)
+            }
+            Text("Changes to routing and DNS apply to the next connection. With the network driver, macOS manages routing, DNS and IPv6 itself.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

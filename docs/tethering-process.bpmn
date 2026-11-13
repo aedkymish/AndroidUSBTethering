@@ -44,8 +44,22 @@
       <bpmn:outgoing>Flow_Retry</bpmn:outgoing>
     </bpmn:userTask>
 
-    <bpmn:subProcess id="SubProcess_BringUp" name="Bring up link (TetheringSession)">
+    <bpmn:exclusiveGateway id="Gateway_Driver" name="DriverKit extension claimed the phone?">
       <bpmn:incoming>Flow_RNDIS</bpmn:incoming>
+      <bpmn:outgoing>Flow_Driver</bpmn:outgoing>
+      <bpmn:outgoing>Flow_UserSpace</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:serviceTask id="Task_DriverKit" name="AndroidRNDISDriver: RNDIS handshake, register enX; macOS runs DHCP, IPv6, DNS">
+      <bpmn:incoming>Flow_Driver</bpmn:incoming>
+      <bpmn:outgoing>Flow_Driver_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Native" name="Native Ethernet interface">
+      <bpmn:incoming>Flow_Driver_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:subProcess id="SubProcess_BringUp" name="User-space fallback: bring up link (TetheringSession)">
+      <bpmn:incoming>Flow_UserSpace</bpmn:incoming>
       <bpmn:outgoing>Flow_Connected</bpmn:outgoing>
 
       <bpmn:startEvent id="Start_BringUp">
@@ -122,7 +136,10 @@
     <bpmn:sequenceFlow id="Flow_NCM_End" sourceRef="Task_NativeNCM" targetRef="End_NCM" />
     <bpmn:sequenceFlow id="Flow_None" name="No network function" sourceRef="Gateway_Protocol" targetRef="Task_EnableTethering" />
     <bpmn:sequenceFlow id="Flow_Retry" sourceRef="Task_EnableTethering" targetRef="Task_Identify" />
-    <bpmn:sequenceFlow id="Flow_RNDIS" name="RNDIS" sourceRef="Gateway_Protocol" targetRef="SubProcess_BringUp" />
+    <bpmn:sequenceFlow id="Flow_RNDIS" name="RNDIS" sourceRef="Gateway_Protocol" targetRef="Gateway_Driver" />
+    <bpmn:sequenceFlow id="Flow_Driver" name="Yes" sourceRef="Gateway_Driver" targetRef="Task_DriverKit" />
+    <bpmn:sequenceFlow id="Flow_Driver_End" sourceRef="Task_DriverKit" targetRef="End_Native" />
+    <bpmn:sequenceFlow id="Flow_UserSpace" name="No (after grace period)" sourceRef="Gateway_Driver" targetRef="SubProcess_BringUp" />
     <bpmn:sequenceFlow id="Flow_Connected" sourceRef="SubProcess_BringUp" targetRef="Task_SLAAC" />
     <bpmn:sequenceFlow id="Flow_IPv6" sourceRef="Task_SLAAC" targetRef="Catch_DeviceGone" />
     <bpmn:sequenceFlow id="Flow_Teardown" sourceRef="Catch_DeviceGone" targetRef="Task_Teardown" />
@@ -143,60 +160,60 @@
         <dc:Bounds x="330" y="180" width="50" height="50" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_NativeNCM_di" bpmnElement="Task_NativeNCM">
-        <dc:Bounds x="430" y="20" width="100" height="80" />
+        <dc:Bounds x="530" y="20" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="End_NCM_di" bpmnElement="End_NCM">
-        <dc:Bounds x="580" y="42" width="36" height="36" />
+        <dc:Bounds x="680" y="42" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_EnableTethering_di" bpmnElement="Task_EnableTethering">
-        <dc:Bounds x="430" y="330" width="100" height="80" />
+        <dc:Bounds x="530" y="330" width="100" height="80" />
       </bpmndi:BPMNShape>
 
       <bpmndi:BPMNShape id="SubProcess_BringUp_di" bpmnElement="SubProcess_BringUp" isExpanded="true">
-        <dc:Bounds x="450" y="130" width="800" height="150" />
+        <dc:Bounds x="550" y="130" width="800" height="150" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Start_BringUp_di" bpmnElement="Start_BringUp">
-        <dc:Bounds x="470" y="187" width="36" height="36" />
+        <dc:Bounds x="570" y="187" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_RNDISInit_di" bpmnElement="Task_RNDISInit">
-        <dc:Bounds x="540" y="165" width="100" height="80" />
+        <dc:Bounds x="640" y="165" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_QueryMAC_di" bpmnElement="Task_QueryMAC">
-        <dc:Bounds x="670" y="165" width="100" height="80" />
+        <dc:Bounds x="770" y="165" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_DHCP_di" bpmnElement="Task_DHCP">
-        <dc:Bounds x="800" y="165" width="100" height="80" />
+        <dc:Bounds x="900" y="165" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_Utun_di" bpmnElement="Task_Utun">
-        <dc:Bounds x="930" y="165" width="100" height="80" />
+        <dc:Bounds x="1030" y="165" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_Routes_di" bpmnElement="Task_Routes">
-        <dc:Bounds x="1060" y="165" width="100" height="80" />
+        <dc:Bounds x="1160" y="165" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="End_BringUp_di" bpmnElement="End_BringUp">
-        <dc:Bounds x="1190" y="187" width="36" height="36" />
+        <dc:Bounds x="1290" y="187" width="36" height="36" />
       </bpmndi:BPMNShape>
 
       <bpmndi:BPMNShape id="Boundary_LinkError_di" bpmnElement="Boundary_LinkError">
-        <dc:Bounds x="1100" y="262" width="36" height="36" />
+        <dc:Bounds x="1200" y="262" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_SLAAC_di" bpmnElement="Task_SLAAC">
-        <dc:Bounds x="1290" y="165" width="100" height="80" />
+        <dc:Bounds x="1390" y="165" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Catch_DeviceGone_di" bpmnElement="Catch_DeviceGone">
-        <dc:Bounds x="1430" y="187" width="36" height="36" />
+        <dc:Bounds x="1530" y="187" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_Teardown_di" bpmnElement="Task_Teardown">
-        <dc:Bounds x="1520" y="165" width="100" height="80" />
+        <dc:Bounds x="1620" y="165" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="End_Done_di" bpmnElement="End_Done">
-        <dc:Bounds x="1670" y="187" width="36" height="36" />
+        <dc:Bounds x="1770" y="187" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_Rollback_di" bpmnElement="Task_Rollback">
-        <dc:Bounds x="1068" y="340" width="100" height="80" />
+        <dc:Bounds x="1168" y="340" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="End_Failed_di" bpmnElement="End_Failed">
-        <dc:Bounds x="1220" y="362" width="36" height="36" />
+        <dc:Bounds x="1320" y="362" width="36" height="36" />
       </bpmndi:BPMNShape>
 
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
@@ -206,56 +223,74 @@
         <di:waypoint x="280" y="205" /><di:waypoint x="330" y="205" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_NCM_di" bpmnElement="Flow_NCM">
-        <di:waypoint x="355" y="180" /><di:waypoint x="355" y="60" /><di:waypoint x="430" y="60" />
+        <di:waypoint x="355" y="180" /><di:waypoint x="355" y="60" /><di:waypoint x="530" y="60" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_NCM_End_di" bpmnElement="Flow_NCM_End">
-        <di:waypoint x="530" y="60" /><di:waypoint x="580" y="60" />
+        <di:waypoint x="630" y="60" /><di:waypoint x="680" y="60" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_None_di" bpmnElement="Flow_None">
-        <di:waypoint x="355" y="230" /><di:waypoint x="355" y="370" /><di:waypoint x="430" y="370" />
+        <di:waypoint x="355" y="230" /><di:waypoint x="355" y="370" /><di:waypoint x="530" y="370" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Retry_di" bpmnElement="Flow_Retry">
-        <di:waypoint x="480" y="410" /><di:waypoint x="480" y="440" />
+        <di:waypoint x="580" y="410" /><di:waypoint x="580" y="440" />
         <di:waypoint x="230" y="440" /><di:waypoint x="230" y="245" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Gateway_Driver_di" bpmnElement="Gateway_Driver" isMarkerVisible="true">
+        <dc:Bounds x="420" y="180" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DriverKit_di" bpmnElement="Task_DriverKit">
+        <dc:Bounds x="530" y="480" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Native_di" bpmnElement="End_Native">
+        <dc:Bounds x="680" y="502" width="36" height="36" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_RNDIS_di" bpmnElement="Flow_RNDIS">
-        <di:waypoint x="380" y="205" /><di:waypoint x="450" y="205" />
+        <di:waypoint x="380" y="205" /><di:waypoint x="420" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_UserSpace_di" bpmnElement="Flow_UserSpace">
+        <di:waypoint x="470" y="205" /><di:waypoint x="550" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Driver_di" bpmnElement="Flow_Driver">
+        <di:waypoint x="445" y="230" /><di:waypoint x="445" y="520" /><di:waypoint x="530" y="520" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Driver_End_di" bpmnElement="Flow_Driver_End">
+        <di:waypoint x="630" y="520" /><di:waypoint x="680" y="520" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_S1_di" bpmnElement="Flow_S1">
-        <di:waypoint x="506" y="205" /><di:waypoint x="540" y="205" />
+        <di:waypoint x="606" y="205" /><di:waypoint x="640" y="205" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_S2_di" bpmnElement="Flow_S2">
-        <di:waypoint x="640" y="205" /><di:waypoint x="670" y="205" />
+        <di:waypoint x="740" y="205" /><di:waypoint x="770" y="205" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_S3_di" bpmnElement="Flow_S3">
-        <di:waypoint x="770" y="205" /><di:waypoint x="800" y="205" />
+        <di:waypoint x="870" y="205" /><di:waypoint x="900" y="205" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_S4_di" bpmnElement="Flow_S4">
-        <di:waypoint x="900" y="205" /><di:waypoint x="930" y="205" />
+        <di:waypoint x="1000" y="205" /><di:waypoint x="1030" y="205" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_S5_di" bpmnElement="Flow_S5">
-        <di:waypoint x="1030" y="205" /><di:waypoint x="1060" y="205" />
+        <di:waypoint x="1130" y="205" /><di:waypoint x="1160" y="205" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_S6_di" bpmnElement="Flow_S6">
-        <di:waypoint x="1160" y="205" /><di:waypoint x="1190" y="205" />
+        <di:waypoint x="1260" y="205" /><di:waypoint x="1290" y="205" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Connected_di" bpmnElement="Flow_Connected">
-        <di:waypoint x="1250" y="205" /><di:waypoint x="1290" y="205" />
+        <di:waypoint x="1350" y="205" /><di:waypoint x="1390" y="205" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_IPv6_di" bpmnElement="Flow_IPv6">
-        <di:waypoint x="1390" y="205" /><di:waypoint x="1430" y="205" />
+        <di:waypoint x="1490" y="205" /><di:waypoint x="1530" y="205" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Teardown_di" bpmnElement="Flow_Teardown">
-        <di:waypoint x="1466" y="205" /><di:waypoint x="1520" y="205" />
+        <di:waypoint x="1566" y="205" /><di:waypoint x="1620" y="205" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Done_di" bpmnElement="Flow_Done">
-        <di:waypoint x="1620" y="205" /><di:waypoint x="1670" y="205" />
+        <di:waypoint x="1720" y="205" /><di:waypoint x="1770" y="205" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Error_di" bpmnElement="Flow_Error">
-        <di:waypoint x="1118" y="298" /><di:waypoint x="1118" y="340" />
+        <di:waypoint x="1218" y="298" /><di:waypoint x="1218" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Failed_di" bpmnElement="Flow_Failed">
-        <di:waypoint x="1168" y="380" /><di:waypoint x="1220" y="380" />
+        <di:waypoint x="1268" y="380" /><di:waypoint x="1320" y="380" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

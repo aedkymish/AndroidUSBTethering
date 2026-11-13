@@ -14,6 +14,7 @@ enum HelperInstallState: Equatable {
 @MainActor
 final class AppModel: ObservableObject {
     @Published var helperState: HelperInstallState = .unknown
+    @Published var driverState: DriverInstallState = .unknown
     @Published var status = HelperStatus()
     @Published var helperReachable = false
     @Published var lastError: String?
@@ -25,9 +26,14 @@ final class AppModel: ObservableObject {
         return nil
     }
 
+    var nativeEthernet: (deviceName: String, interfaceName: String?)? {
+        if case let .nativeEthernet(name, interface) = status.state { return (name, interface) }
+        return nil
+    }
+
     var menuBarSymbol: String {
         switch status.state {
-        case .connected: return "cable.connector"
+        case .connected, .nativeEthernet: return "cable.connector"
         case .failed: return "exclamationmark.triangle"
         case .initializingLink, .negotiatingDHCP, .configuringNetwork: return "arrow.triangle.2.circlepath"
         case .idle, .nativeNCM: return "cable.connector.slash"

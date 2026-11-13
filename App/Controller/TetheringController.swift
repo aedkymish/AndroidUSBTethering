@@ -8,12 +8,17 @@ final class TetheringController: ObservableObject {
     let model = AppModel()
 
     private let installer = HelperInstaller()
+    private let driver = DriverExtensionManager()
     private let helper = HelperConnection()
     private var pollTask: Task<Void, Never>?
     static let pollInterval: Duration = .seconds(2)
 
     init() {
         model.helperState = installer.currentState()
+        driver.onStateChange = { [weak self] state in
+            Task { @MainActor in self?.model.driverState = state }
+        }
+        driver.refresh()
         startPolling()
     }
 
@@ -28,6 +33,14 @@ final class TetheringController: ObservableObject {
         if model.helperState == .requiresApproval {
             installer.openApprovalSettings()
         }
+    }
+
+    func installDriver() {
+        driver.activate()
+    }
+
+    func uninstallDriver() {
+        driver.deactivate()
     }
 
     func openApprovalSettings() {
