@@ -2,6 +2,7 @@ import Darwin
 import Foundation
 import os
 import Security
+import TetheringCore
 
 /// Decides whether an XPC client may drive the privileged helper.
 ///
