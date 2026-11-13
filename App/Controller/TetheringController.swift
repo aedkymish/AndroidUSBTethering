@@ -206,7 +206,7 @@ final class TetheringController: ObservableObject {
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.refresh()
-                await self?.pollADBPeriodically()
+                self?.pollADBPeriodically()
                 try? await Task.sleep(for: Self.pollInterval)
             }
         }

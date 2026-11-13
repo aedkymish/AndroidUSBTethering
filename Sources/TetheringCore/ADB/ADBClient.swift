@@ -100,3 +100,7 @@ public final class ADBClient {
         }
     }
 }
+
+// ADBClient holds only immutable state (the executable path and the command runner), and each
+// call starts its own process, so it can be used from any queue.
+extension ADBClient: @unchecked Sendable {}
