@@ -8,11 +8,11 @@ on:
 jobs:
   core:
     name: TetheringCore (build + tests)
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+      - name: Show toolchain
+        run: xcodebuild -version && swift --version
       - name: Build
         run: swift build
       - name: Test
@@ -20,11 +20,11 @@ jobs:
 
   app:
     name: App + Helper (xcodebuild)
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+      - name: Show toolchain
+        run: xcodebuild -version && swift --version
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate project
