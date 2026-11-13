@@ -4,6 +4,7 @@ import TetheringCore
 struct SettingsView: View {
     let controller: TetheringController
     @ObservedObject var model: AppModel
+    @AppStorage(TetheringController.preferNCMKey) private var preferNCM = true
 
     var body: some View {
         Form {
@@ -15,6 +16,7 @@ struct SettingsView: View {
                 get: { model.status.options.usePhoneDNS }, set: controller.setUsePhoneDNS))
             Toggle("Enable IPv6 (when the phone's network provides it)", isOn: Binding(
                 get: { model.status.options.enableIPv6 }, set: controller.setEnableIPv6))
+            Toggle("ADB: try NCM first (native macOS support, Android 11+), then RNDIS", isOn: $preferNCM)
             if model.driverState == .activated {
                 Button("Uninstall Network Driver", action: controller.uninstallDriver)
             }

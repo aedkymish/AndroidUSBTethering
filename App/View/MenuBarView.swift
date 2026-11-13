@@ -23,6 +23,8 @@ struct MenuBarView: View {
                 helperPrompt("A system helper is required to talk to the phone over USB.",
                              action: "Install Helper", perform: controller.installHelper)
             }
+            Divider()
+            adbSection
             if let error = model.lastError {
                 Text(error).font(.caption).foregroundStyle(.red)
             }
@@ -34,7 +36,8 @@ struct MenuBarView: View {
             }
         }
         .padding()
-        .frame(width: 300)
+        .frame(width: 320)
+        .onAppear(perform: controller.refreshADB)
     }
 
     @ViewBuilder
@@ -103,6 +106,48 @@ struct MenuBarView: View {
         }
         if !model.helperReachable {
             Text("Helper not responding…").font(.caption).foregroundStyle(.orange)
+        }
+    }
+
+    @ViewBuilder
+    private var adbSection: some View {
+        Text("Turn on tethering from this Mac (ADB)").font(.subheadline.weight(.semibold))
+        if !model.adbAvailable {
+            Text("Install Android platform-tools to control the phone over USB debugging:\nbrew install --cask android-platform-tools")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+        } else if model.adbDevices.isEmpty {
+            Text("No phone with USB debugging found. Enable Developer options → USB debugging on the phone.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            ForEach(model.adbDevices) { device in
+                switch device.state {
+                case .device:
+                    HStack {
+                        Text(device.displayName)
+                        Spacer()
+                        if model.adbBusy {
+                            ProgressView().controlSize(.small)
+                        } else if model.tetheringActive {
+                            Button("Turn Off") { controller.disableTethering(on: device) }
+                        } else {
+                            Button("Turn On") { controller.enableTethering(on: device) }
+                        }
+                    }
+                case .unauthorized:
+                    Text("\(device.displayName): tap “Allow” for USB debugging on the phone.")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                case .offline, .other:
+                    Text("\(device.displayName): \(device.state.rawValue)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
     }
 

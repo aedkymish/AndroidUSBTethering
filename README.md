@@ -97,6 +97,30 @@ swift build
 swift test
 ```
 
+## Turning on tethering from the Mac (ADB)
+
+Instead of opening Android Settings, you can start tethering from the menu bar with Android Debug
+Bridge:
+
+1. Install platform-tools on the Mac:
+
+   ```bash
+   brew install --cask android-platform-tools
+   ```
+
+2. On the phone, enable **Developer options → USB debugging**, connect the cable and tap
+   **Allow** when asked to trust this Mac.
+3. In the menu bar app, click **Turn On** next to the phone.
+
+The app runs `adb shell svc usb setFunctions <function>` (Android 9 or later):
+
+- **NCM first**: macOS supports NCM natively, so many Android 11+ phones then work with no driver.
+- **RNDIS fallback**: if no NCM interface appears within 10 seconds, the app switches to RNDIS.
+
+You can turn off the NCM-first behaviour in Settings. **Turn Off** switches the phone back to
+charging only. adb runs as your user, not in the root helper, so your existing adb authorization is
+reused.
+
 ## Usage
 
 1. Launch the app. A cable icon appears in the menu bar.
@@ -133,6 +157,7 @@ Sources/TetheringCore/
   System/                   RouteManager, DNSConfigurator, CommandRunner
   XPC/                      App ⇄ helper contract (TetheringHelperProtocol)
 Tests/TetheringCoreTests/   Unit tests (mock phone, DHCP, ARP, NDP/SLAAC, bridge, descriptors)
+  ADB/                      adb locator, device list parser, ADBClient (svc usb setFunctions)
 App/                        SwiftUI menu-bar app (Model / View / Controller)
 Driver/                     DriverKit extension: AndroidRNDISDriver (.iig/.cpp), portable RNDIS
                             codec + C++ tests, Info.plist/entitlements generator
@@ -188,7 +213,8 @@ log stream --predicate 'sender == "com.aedkymish.AndroidUSBTethering.RNDISDriver
   Please report results.
 - In user-space mode the link is a layer-3 `utun` interface, so it does not appear as an Ethernet
   service in System Settings. Use the DriverKit driver for that.
-- Turning on tethering still has to be done on the phone.
+- Turning on tethering from the Mac requires USB debugging (ADB). Without it, turn it on in the
+  phone's settings.
 
 ## Troubleshooting
 
@@ -211,3 +237,16 @@ netstat -rn -f inet | head -20
 ```bash
 netstat -rn -f inet6 | head -20
 ```
+
+## License
+
+Copyright 2026 Ali Edkymish
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this project except
+in compliance with the License. You may obtain a copy of the License in [LICENSE](LICENSE) or at
+<https://www.apache.org/licenses/LICENSE-2.0>.
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is
+distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+implied. See the License for the specific language governing permissions and limitations under the
+License.

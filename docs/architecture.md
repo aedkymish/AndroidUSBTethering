@@ -93,6 +93,37 @@ CI builds and runs those tests on every push.
 └──────────────────────────────────────────────────────────────┘
 ```
 
+## Turning tethering on with ADB
+
+`ADBClient` (TetheringCore) wraps the `adb` command line tool, which `ADBLocator` finds in Android
+Studio's SDK, Homebrew or `$ANDROID_HOME`. It runs in the **app** (user context), not in the root
+helper, so the user's existing adb RSA key and the phone's "Allow USB debugging" approval are reused.
+
+```
+TetheringController.enableTethering(on:)
+  ├─ preferNCM? ── adb shell svc usb setFunctions ncm
+  │                 └─ wait ≤ 10 s for HelperStatus.devices to contain an NCM interface
+  └─ otherwise / timeout ── adb shell svc usb setFunctions rndis
+                              └─ helper (or DriverKit driver) picks up the RNDIS interface
+```
+
+```mermaid
+classDiagram
+    class ADBLocator { +locate() String? }
+    class ADBClient {
+        +devices() [ADBDevice]
+        +enableTethering(on, function)
+        +disableTethering(on)
+    }
+    class ADBDevice { serial, state, model }
+    class ADBUSBFunction { <<enum>> rndis, ncm }
+    ADBClient ..> ADBLocator
+    ADBClient o-- CommandRunning
+    ADBClient --> ADBDevice
+    ADBClient ..> ADBUSBFunction
+    TetheringController *-- ADBClient
+```
+
 ## Why a privileged helper?
 
 Opening the phone's USB interfaces, creating a `utun` interface, changing routes and publishing DNS

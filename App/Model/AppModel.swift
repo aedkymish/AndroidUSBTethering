@@ -19,6 +19,19 @@ final class AppModel: ObservableObject {
     @Published var helperReachable = false
     @Published var lastError: String?
 
+    // ADB
+    @Published var adbAvailable = false
+    @Published var adbDevices: [ADBDevice] = []
+    @Published var adbBusy = false
+
+    /// Whether any tethering link (user-space, DriverKit or NCM) is up or coming up.
+    var tetheringActive: Bool {
+        switch status.state {
+        case .nativeEthernet, .nativeNCM: return true
+        default: return status.state.isActive
+        }
+    }
+
     var rndisDevices: [AndroidDevice] { status.devices.filter { $0.tetheringProtocol == .rndis } }
 
     var connectionInfo: ConnectionInfo? {

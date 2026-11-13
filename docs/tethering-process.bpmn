@@ -39,7 +39,7 @@
       <bpmn:incoming>Flow_NCM_End</bpmn:incoming>
     </bpmn:endEvent>
 
-    <bpmn:userTask id="Task_EnableTethering" name="Enable USB tethering on the phone">
+    <bpmn:userTask id="Task_EnableTethering" name="Enable USB tethering (phone settings, or Turn On via ADB: NCM first, then RNDIS)">
       <bpmn:incoming>Flow_None</bpmn:incoming>
       <bpmn:outgoing>Flow_Retry</bpmn:outgoing>
     </bpmn:userTask>
