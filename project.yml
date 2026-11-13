@@ -52,6 +52,7 @@ targetTemplates:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.aedkymish.AndroidUSBTethering
         PRODUCT_NAME: AndroidUSBTethering
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
 targets:
   # Default build: user-space driver only. Needs no special entitlements, so it signs with a

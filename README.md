@@ -167,6 +167,7 @@ Driver/                     DriverKit extension: AndroidRNDISDriver (.iig/.cpp),
                             codec + C++ tests, Info.plist/entitlements generator
 Helper/                     Privileged launchd daemon + plist
 docs/                       Architecture, BPMN 2.0 model, protocol notes
+Scripts/generate_app_icon.py  Draws the app icon (Pillow) into App/Resources/Assets.xcassets
 project.yml                 XcodeGen spec for the app and helper targets
 ```
 
