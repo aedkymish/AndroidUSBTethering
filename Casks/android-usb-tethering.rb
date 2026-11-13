@@ -7,7 +7,7 @@ cask "android-usb-tethering" do
   desc "Use an Android phone's USB tethering (RNDIS or NCM) as a network connection"
   homepage "https://github.com/aedkymish/AndroidUSBTethering"
 
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   app "AndroidUSBTethering.app"
 
