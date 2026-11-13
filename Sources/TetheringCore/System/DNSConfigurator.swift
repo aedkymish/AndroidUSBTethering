@@ -19,7 +19,7 @@ public final class DNSConfigurator {
 
     public func remove() {
         guard applied else { return }
-        try? runner.run("/usr/sbin/scutil", [], input: "remove \(Self.storeKey)\nquit\n")
+        _ = try? runner.run("/usr/sbin/scutil", [], input: "remove \(Self.storeKey)\nquit\n")
         applied = false
     }
 

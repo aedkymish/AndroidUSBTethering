@@ -25,7 +25,7 @@ public final class RouteManager {
 
     public func removeAll() {
         for network in installed {
-            try? runner.run("/sbin/route", ["-q", "-n", "delete", "-net", network, "-interface", interfaceName])
+            _ = try? runner.run("/sbin/route", ["-q", "-n", "delete", "-net", network, "-interface", interfaceName])
         }
         installed.removeAll()
     }
