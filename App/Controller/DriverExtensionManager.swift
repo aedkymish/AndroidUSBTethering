@@ -2,21 +2,6 @@ import Foundation
 import SystemExtensions
 import TetheringCore
 
-/// Installation state of the DriverKit network driver.
-enum DriverInstallState: Equatable {
-    /// This build does not embed the driver (default build for free Apple IDs).
-    case notBundled
-    case unknown
-    case notInstalled
-    /// Waiting for the user to allow it in System Settings.
-    case awaitingApproval
-    case activating
-    case activated
-    /// macOS only activates system extensions from apps in /Applications.
-    case requiresApplicationsFolder
-    case failed(String)
-}
-
 /// Activates the AndroidRNDISDriver DriverKit extension embedded in the app
 /// (Contents/Library/SystemExtensions) through the SystemExtensions framework.
 /// Delegate callbacks arrive on the main queue; `onStateChange` is called there too.

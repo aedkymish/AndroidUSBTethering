@@ -87,6 +87,10 @@ In Xcode:
 
 If the bundle identifier is already taken for your team, change `com.aedkymish` in `project.yml`.
 
+> **After every `git pull`, run `xcodegen generate` again.** The Xcode project lists source files
+> explicitly, so new files are missing from an old project. You then get errors such as
+> "Cannot find type … in scope".
+
 Build and test the core library without Xcode:
 
 ```bash

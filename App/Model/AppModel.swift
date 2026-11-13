@@ -10,6 +10,21 @@ enum HelperInstallState: Equatable {
     case failed(String)
 }
 
+/// Installation state of the DriverKit network driver.
+enum DriverInstallState: Equatable {
+    /// This build does not embed the driver (default build for free Apple IDs).
+    case notBundled
+    case unknown
+    case notInstalled
+    /// Waiting for the user to allow it in System Settings.
+    case awaitingApproval
+    case activating
+    case activated
+    /// macOS only activates system extensions from apps in /Applications.
+    case requiresApplicationsFolder
+    case failed(String)
+}
+
 /// Observable model for the UI (the "M" in MVC). Only the controller mutates it.
 @MainActor
 final class AppModel: ObservableObject {
