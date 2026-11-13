@@ -1,6 +1,15 @@
 
 ## Install
 
+With Homebrew:
+
+```bash
+brew tap aedkymish/androidusbtethering https://github.com/aedkymish/AndroidUSBTethering
+brew install --cask android-usb-tethering
+```
+
+Or manually:
+
 1. Download **AndroidUSBTethering-VERSION.dmg**, open it and drag the app to **Applications**.
 2. Open the app once. The build is ad-hoc signed and **not notarized** (no paid Apple Developer
    account), so macOS blocks it the first time. Go to **System Settings → Privacy & Security** and

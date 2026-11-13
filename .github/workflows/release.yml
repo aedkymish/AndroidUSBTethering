@@ -85,3 +85,26 @@ jobs:
             --title "Android USB Tethering $VERSION" \
             --notes-file notes.md \
             --prerelease
+
+      - name: Update Homebrew cask
+        if: github.ref_type == 'tag'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          SHA=$(shasum -a 256 "dist/AndroidUSBTethering-$VERSION.dmg" | cut -d ' ' -f 1)
+          # Commit as the author of the tagged commit.
+          AUTHOR_NAME=$(git log -1 --format=%an)
+          AUTHOR_EMAIL=$(git log -1 --format=%ae)
+          git fetch --depth=1 origin main
+          git switch --detach FETCH_HEAD
+          sed -i '' -E \
+            -e "s/^  version \".*\"/  version \"$VERSION\"/" \
+            -e "s/^  sha256 \".*\"/  sha256 \"$SHA\"/" \
+            Casks/android-usb-tethering.rb
+          if git diff --quiet; then
+            echo "Cask already at $VERSION"
+            exit 0
+          fi
+          git -c user.name="$AUTHOR_NAME" -c user.email="$AUTHOR_EMAIL" \
+            commit -am "Homebrew cask: android-usb-tethering $VERSION"
+          git push origin HEAD:main

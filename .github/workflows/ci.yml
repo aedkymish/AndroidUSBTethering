@@ -28,6 +28,17 @@ jobs:
             Driver/RNDISCodec.cpp Driver/Tests/RNDISCodecTests.cpp -o codec-tests
           ./codec-tests
 
+  cask:
+    name: Homebrew cask (style + audit)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tap this repository and audit the cask
+        run: |
+          brew tap aedkymish/androidusbtethering "$GITHUB_WORKSPACE"
+          brew style --cask aedkymish/androidusbtethering/android-usb-tethering
+          brew audit --cask aedkymish/androidusbtethering/android-usb-tethering
+
   app:
     name: App + Helper + Driver (xcodebuild)
     runs-on: macos-latest

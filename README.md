@@ -55,6 +55,23 @@ See [docs/architecture.md](docs/architecture.md) for the design (MVC, class diag
 
 ## Install a release
 
+### Homebrew
+
+```bash
+brew tap aedkymish/androidusbtethering https://github.com/aedkymish/AndroidUSBTethering
+```
+
+```bash
+brew install --cask android-usb-tethering
+```
+
+The cask (`Casks/android-usb-tethering.rb`) is kept in this repository. The release workflow updates
+its version and checksum every time a release is published. `brew upgrade` picks up new releases,
+and `brew uninstall --cask android-usb-tethering` also removes the helper. The repository must be
+public for Homebrew to download the release.
+
+### Manual download
+
 Download the latest `.dmg` from [Releases](https://github.com/aedkymish/AndroidUSBTethering/releases)
 and drag the app to Applications.
 
