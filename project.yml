@@ -1,0 +1,71 @@
+# Generate the Xcode project with:  xcodegen generate
+name: AndroidUSBTethering
+options:
+  bundleIdPrefix: com.aedkymish
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+
+packages:
+  TetheringCore:
+    path: .
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    ENABLE_HARDENED_RUNTIME: YES
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""          # set your Apple Developer Team ID
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  AndroidUSBTethering:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+        excludes:
+          - "Resources/Info.plist"
+          - "Resources/*.entitlements"
+      - path: Helper/com.aedkymish.AndroidUSBTethering.helper.plist
+        buildPhase:
+          copyFiles:
+            destination: wrapper
+            subpath: Contents/Library/LaunchDaemons
+    dependencies:
+      - package: TetheringCore
+      - target: AndroidUSBTetheringHelper
+        embed: true
+        codeSign: true
+        copy:
+          destination: executables
+    info:
+      path: App/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Android USB Tethering
+        LSUIElement: true
+        LSMinimumSystemVersion: "13.0"
+        NSHumanReadableCopyright: "Copyright © 2026 aedkymish"
+    entitlements:
+      path: App/Resources/AndroidUSBTethering.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.aedkymish.AndroidUSBTethering
+        PRODUCT_NAME: AndroidUSBTethering
+
+  AndroidUSBTetheringHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - path: Helper
+        excludes:
+          - "*.plist"
+    dependencies:
+      - package: TetheringCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.aedkymish.AndroidUSBTethering.helper
+        PRODUCT_NAME: AndroidUSBTetheringHelper
+        SKIP_INSTALL: YES

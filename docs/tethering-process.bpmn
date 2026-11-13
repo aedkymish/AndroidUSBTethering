@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_AndroidUSBTethering"
+                  targetNamespace="https://github.com/aedkymish/AndroidUSBTethering"
+                  exporter="hand-written" exporterVersion="1.0">
+
+  <bpmn:message id="Message_DeviceAttached" name="USB device attached" />
+  <bpmn:message id="Message_DeviceGone" name="Device detached or user disconnects" />
+  <bpmn:error id="Error_LinkFailure" name="Link failure" errorCode="LINK_FAILURE" />
+
+  <bpmn:process id="Process_Tethering" name="Android USB Tethering session" isExecutable="false">
+
+    <bpmn:startEvent id="Start_DeviceAttached" name="USB device attached">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_DeviceAttached" />
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask id="Task_Identify" name="Identify interface class (USBDeviceMonitor)">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:incoming>Flow_Retry</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Protocol" name="Tethering protocol?">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_NCM</bpmn:outgoing>
+      <bpmn:outgoing>Flow_None</bpmn:outgoing>
+      <bpmn:outgoing>Flow_RNDIS</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:serviceTask id="Task_NativeNCM" name="Report native NCM interface">
+      <bpmn:incoming>Flow_NCM</bpmn:incoming>
+      <bpmn:outgoing>Flow_NCM_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_NCM" name="Handled by macOS">
+      <bpmn:incoming>Flow_NCM_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:userTask id="Task_EnableTethering" name="Enable USB tethering on the phone">
+      <bpmn:incoming>Flow_None</bpmn:incoming>
+      <bpmn:outgoing>Flow_Retry</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:subProcess id="SubProcess_BringUp" name="Bring up link (TetheringSession)">
+      <bpmn:incoming>Flow_RNDIS</bpmn:incoming>
+      <bpmn:outgoing>Flow_Connected</bpmn:outgoing>
+
+      <bpmn:startEvent id="Start_BringUp">
+        <bpmn:outgoing>Flow_S1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="Task_RNDISInit" name="RNDIS INITIALIZE">
+        <bpmn:incoming>Flow_S1</bpmn:incoming>
+        <bpmn:outgoing>Flow_S2</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="Task_QueryMAC" name="Query MAC, set packet filter">
+        <bpmn:incoming>Flow_S2</bpmn:incoming>
+        <bpmn:outgoing>Flow_S3</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="Task_DHCP" name="DHCP discover / request">
+        <bpmn:incoming>Flow_S3</bpmn:incoming>
+        <bpmn:outgoing>Flow_S4</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="Task_Utun" name="Create and configure utun">
+        <bpmn:incoming>Flow_S4</bpmn:incoming>
+        <bpmn:outgoing>Flow_S5</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="Task_Routes" name="Install routes and DNS">
+        <bpmn:incoming>Flow_S5</bpmn:incoming>
+        <bpmn:outgoing>Flow_S6</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="End_BringUp" name="Link up">
+        <bpmn:incoming>Flow_S6</bpmn:incoming>
+      </bpmn:endEvent>
+
+      <bpmn:sequenceFlow id="Flow_S1" sourceRef="Start_BringUp" targetRef="Task_RNDISInit" />
+      <bpmn:sequenceFlow id="Flow_S2" sourceRef="Task_RNDISInit" targetRef="Task_QueryMAC" />
+      <bpmn:sequenceFlow id="Flow_S3" sourceRef="Task_QueryMAC" targetRef="Task_DHCP" />
+      <bpmn:sequenceFlow id="Flow_S4" sourceRef="Task_DHCP" targetRef="Task_Utun" />
+      <bpmn:sequenceFlow id="Flow_S5" sourceRef="Task_Utun" targetRef="Task_Routes" />
+      <bpmn:sequenceFlow id="Flow_S6" sourceRef="Task_Routes" targetRef="End_BringUp" />
+    </bpmn:subProcess>
+
+    <bpmn:boundaryEvent id="Boundary_LinkError" name="Link failure" attachedToRef="SubProcess_BringUp">
+      <bpmn:outgoing>Flow_Error</bpmn:outgoing>
+      <bpmn:errorEventDefinition errorRef="Error_LinkFailure" />
+    </bpmn:boundaryEvent>
+
+    <bpmn:intermediateCatchEvent id="Catch_DeviceGone" name="Connected: bridge packets until detach / disconnect">
+      <bpmn:incoming>Flow_Connected</bpmn:incoming>
+      <bpmn:outgoing>Flow_Teardown</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_DeviceGone" />
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:serviceTask id="Task_Teardown" name="Release DHCP, remove routes / DNS, close utun and USB">
+      <bpmn:incoming>Flow_Teardown</bpmn:incoming>
+      <bpmn:outgoing>Flow_Done</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Done" name="Session ended">
+      <bpmn:incoming>Flow_Done</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:serviceTask id="Task_Rollback" name="Roll back partial configuration">
+      <bpmn:incoming>Flow_Error</bpmn:incoming>
+      <bpmn:outgoing>Flow_Failed</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Failed" name="Session failed">
+      <bpmn:incoming>Flow_Failed</bpmn:incoming>
+      <bpmn:errorEventDefinition errorRef="Error_LinkFailure" />
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_DeviceAttached" targetRef="Task_Identify" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Identify" targetRef="Gateway_Protocol" />
+    <bpmn:sequenceFlow id="Flow_NCM" name="CDC-NCM" sourceRef="Gateway_Protocol" targetRef="Task_NativeNCM" />
+    <bpmn:sequenceFlow id="Flow_NCM_End" sourceRef="Task_NativeNCM" targetRef="End_NCM" />
+    <bpmn:sequenceFlow id="Flow_None" name="No network function" sourceRef="Gateway_Protocol" targetRef="Task_EnableTethering" />
+    <bpmn:sequenceFlow id="Flow_Retry" sourceRef="Task_EnableTethering" targetRef="Task_Identify" />
+    <bpmn:sequenceFlow id="Flow_RNDIS" name="RNDIS" sourceRef="Gateway_Protocol" targetRef="SubProcess_BringUp" />
+    <bpmn:sequenceFlow id="Flow_Connected" sourceRef="SubProcess_BringUp" targetRef="Catch_DeviceGone" />
+    <bpmn:sequenceFlow id="Flow_Teardown" sourceRef="Catch_DeviceGone" targetRef="Task_Teardown" />
+    <bpmn:sequenceFlow id="Flow_Done" sourceRef="Task_Teardown" targetRef="End_Done" />
+    <bpmn:sequenceFlow id="Flow_Error" sourceRef="Boundary_LinkError" targetRef="Task_Rollback" />
+    <bpmn:sequenceFlow id="Flow_Failed" sourceRef="Task_Rollback" targetRef="End_Failed" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="Diagram_Tethering">
+    <bpmndi:BPMNPlane id="Plane_Tethering" bpmnElement="Process_Tethering">
+      <bpmndi:BPMNShape id="Start_DeviceAttached_di" bpmnElement="Start_DeviceAttached">
+        <dc:Bounds x="100" y="187" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Identify_di" bpmnElement="Task_Identify">
+        <dc:Bounds x="180" y="165" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Protocol_di" bpmnElement="Gateway_Protocol" isMarkerVisible="true">
+        <dc:Bounds x="330" y="180" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_NativeNCM_di" bpmnElement="Task_NativeNCM">
+        <dc:Bounds x="430" y="20" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_NCM_di" bpmnElement="End_NCM">
+        <dc:Bounds x="580" y="42" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EnableTethering_di" bpmnElement="Task_EnableTethering">
+        <dc:Bounds x="430" y="330" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="SubProcess_BringUp_di" bpmnElement="SubProcess_BringUp" isExpanded="true">
+        <dc:Bounds x="450" y="130" width="800" height="150" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_BringUp_di" bpmnElement="Start_BringUp">
+        <dc:Bounds x="470" y="187" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RNDISInit_di" bpmnElement="Task_RNDISInit">
+        <dc:Bounds x="540" y="165" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_QueryMAC_di" bpmnElement="Task_QueryMAC">
+        <dc:Bounds x="670" y="165" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DHCP_di" bpmnElement="Task_DHCP">
+        <dc:Bounds x="800" y="165" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Utun_di" bpmnElement="Task_Utun">
+        <dc:Bounds x="930" y="165" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Routes_di" bpmnElement="Task_Routes">
+        <dc:Bounds x="1060" y="165" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_BringUp_di" bpmnElement="End_BringUp">
+        <dc:Bounds x="1190" y="187" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Boundary_LinkError_di" bpmnElement="Boundary_LinkError">
+        <dc:Bounds x="1100" y="262" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_DeviceGone_di" bpmnElement="Catch_DeviceGone">
+        <dc:Bounds x="1300" y="187" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Teardown_di" bpmnElement="Task_Teardown">
+        <dc:Bounds x="1390" y="165" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Done_di" bpmnElement="End_Done">
+        <dc:Bounds x="1540" y="187" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Rollback_di" bpmnElement="Task_Rollback">
+        <dc:Bounds x="1068" y="340" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Failed_di" bpmnElement="End_Failed">
+        <dc:Bounds x="1220" y="362" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="136" y="205" /><di:waypoint x="180" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="280" y="205" /><di:waypoint x="330" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_NCM_di" bpmnElement="Flow_NCM">
+        <di:waypoint x="355" y="180" /><di:waypoint x="355" y="60" /><di:waypoint x="430" y="60" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_NCM_End_di" bpmnElement="Flow_NCM_End">
+        <di:waypoint x="530" y="60" /><di:waypoint x="580" y="60" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_None_di" bpmnElement="Flow_None">
+        <di:waypoint x="355" y="230" /><di:waypoint x="355" y="370" /><di:waypoint x="430" y="370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Retry_di" bpmnElement="Flow_Retry">
+        <di:waypoint x="480" y="410" /><di:waypoint x="480" y="440" />
+        <di:waypoint x="230" y="440" /><di:waypoint x="230" y="245" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RNDIS_di" bpmnElement="Flow_RNDIS">
+        <di:waypoint x="380" y="205" /><di:waypoint x="450" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S1_di" bpmnElement="Flow_S1">
+        <di:waypoint x="506" y="205" /><di:waypoint x="540" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S2_di" bpmnElement="Flow_S2">
+        <di:waypoint x="640" y="205" /><di:waypoint x="670" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S3_di" bpmnElement="Flow_S3">
+        <di:waypoint x="770" y="205" /><di:waypoint x="800" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S4_di" bpmnElement="Flow_S4">
+        <di:waypoint x="900" y="205" /><di:waypoint x="930" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S5_di" bpmnElement="Flow_S5">
+        <di:waypoint x="1030" y="205" /><di:waypoint x="1060" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S6_di" bpmnElement="Flow_S6">
+        <di:waypoint x="1160" y="205" /><di:waypoint x="1190" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Connected_di" bpmnElement="Flow_Connected">
+        <di:waypoint x="1250" y="205" /><di:waypoint x="1300" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Teardown_di" bpmnElement="Flow_Teardown">
+        <di:waypoint x="1336" y="205" /><di:waypoint x="1390" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Done_di" bpmnElement="Flow_Done">
+        <di:waypoint x="1490" y="205" /><di:waypoint x="1540" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Error_di" bpmnElement="Flow_Error">
+        <di:waypoint x="1118" y="298" /><di:waypoint x="1118" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Failed_di" bpmnElement="Flow_Failed">
+        <di:waypoint x="1168" y="380" /><di:waypoint x="1220" y="380" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
