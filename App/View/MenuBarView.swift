@@ -5,6 +5,7 @@ import TetheringCore
 struct MenuBarView: View {
     let controller: TetheringController
     @ObservedObject var model: AppModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -30,6 +31,10 @@ struct MenuBarView: View {
             }
             Divider()
             HStack {
+                Button("About") {
+                    controller.prepareAbout()
+                    openWindow(id: AboutView.windowID)
+                }
                 Button("Settings…", action: controller.openSettings)
                 Spacer()
                 Button("Quit", action: controller.quit)

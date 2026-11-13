@@ -15,6 +15,11 @@ struct AndroidUSBTetheringApp: App {
         Settings {
             SettingsView(controller: controller, model: controller.model)
         }
+
+        Window("About Android USB Tethering", id: AboutView.windowID) {
+            AboutView(info: controller.aboutInfo, model: controller.model)
+        }
+        .windowResizability(.contentSize)
     }
 }
 

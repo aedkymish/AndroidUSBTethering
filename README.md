@@ -21,7 +21,7 @@ The project has two app targets (schemes):
 In the DriverKit build, the driver claims the phone first. If it isn't installed, the helper uses the
 user-space driver after a short grace period.
 
-> **Status:** early development (v0.1.0). The protocol logic is unit-tested, but the app has not yet
+> **Status:** early development (v0.3.0). The protocol logic is unit-tested, but the app has not yet
 > been validated end-to-end on many phone models. Please report results in the Issues.
 
 ## How it works

@@ -32,6 +32,7 @@ final class AppModel: ObservableObject {
     @Published var driverState: DriverInstallState = .unknown
     @Published var status = HelperStatus()
     @Published var helperReachable = false
+    @Published var helperVersion: String?
     @Published var lastError: String?
 
     // ADB

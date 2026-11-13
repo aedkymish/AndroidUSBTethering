@@ -42,6 +42,23 @@ final class TetheringController: ObservableObject {
         }
     }
 
+    var aboutInfo: AboutInfo {
+        AboutInfo(includesDriverKit: driver.isBundled)
+    }
+
+    /// Refreshes the live details shown in the About window.
+    func prepareAbout() {
+        NSApp.activate(ignoringOtherApps: true)
+        refreshADB()
+        Task {
+            guard model.helperReachable else {
+                model.helperVersion = nil
+                return
+            }
+            model.helperVersion = try? await helper.helperVersion()
+        }
+    }
+
     func installDriver() {
         driver.activate()
     }

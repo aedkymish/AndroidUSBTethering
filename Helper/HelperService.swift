@@ -6,7 +6,7 @@ import TetheringCore
 /// XPC endpoint and coordinator for the privileged side.
 /// Owns the device monitor and at most one active `TetheringSession`.
 final class HelperService: NSObject, NSXPCListenerDelegate, TetheringHelperProtocol {
-    static let version = "0.2.0"
+    static let version = "0.3.0"
     /// Time given to the DriverKit extension to claim a newly attached phone before the
     /// user-space driver is used as a fallback.
     static let driverKitGracePeriod: TimeInterval = 3

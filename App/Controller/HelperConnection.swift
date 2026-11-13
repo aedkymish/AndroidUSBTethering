@@ -53,6 +53,12 @@ final class HelperConnection {
         }
     }
 
+    func helperVersion() async throws -> String {
+        try await call { helper, once in
+            helper.helperVersion { once.resume(returning: $0) }
+        }
+    }
+
     func invalidate() {
         connection?.invalidate()
         connection = nil

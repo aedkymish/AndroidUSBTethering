@@ -75,8 +75,10 @@ CI builds and runs those tests on every push.
 ┌─────────────── AndroidUSBTethering.app (user) ───────────────┐
 │  Contents/Library/SystemExtensions/…RNDISDriver.dext         │
 │  (activated with DriverExtensionManager, OSSystemExtension)  │
-│  Model       AppModel (ObservableObject), HelperInstallState │
-│  View        MenuBarView, SettingsView, MenuBarLabel         │
+│  Model       AppModel, AboutInfo, HelperInstallState,        │
+│              DriverInstallState                              │
+│  View        MenuBarView, SettingsView, AboutView,           │
+│              MenuBarLabel                                    │
 │  Controller  TetheringController, HelperConnection,          │
 │              HelperInstaller (SMAppService),                 │
 │              DriverExtensionManager (SystemExtensions)       │
