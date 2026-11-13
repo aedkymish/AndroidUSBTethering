@@ -73,7 +73,7 @@ public final class IOUSBHostChannel: RNDISUSBChannel {
                                          wLength: UInt16(message.count))
         let buffer = NSMutableData(data: message)
         var transferred = 0
-        try controlInterface.__sendDeviceRequest(request, data: buffer, bytesTransferred: &transferred,
+        try controlInterface.__send(request, data: buffer, bytesTransferred: &transferred,
                                                completionTimeout: Self.controlTimeout)
     }
 
@@ -84,7 +84,7 @@ public final class IOUSBHostChannel: RNDISUSBChannel {
                                          wLength: UInt16(maxLength))
         let buffer = NSMutableData(length: maxLength) ?? NSMutableData()
         var transferred = 0
-        try controlInterface.__sendDeviceRequest(request, data: buffer, bytesTransferred: &transferred,
+        try controlInterface.__send(request, data: buffer, bytesTransferred: &transferred,
                                                completionTimeout: Self.controlTimeout)
         return Data(bytes: buffer.bytes, count: transferred)
     }
