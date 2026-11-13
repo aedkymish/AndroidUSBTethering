@@ -47,6 +47,7 @@ jobs:
             -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
           ! test -e build/Build/Products/Debug/AndroidUSBTethering.app/Contents/Library/SystemExtensions
           test -f build/Build/Products/Debug/AndroidUSBTethering.app/Contents/Resources/AppIcon.icns
+          test -f build/Build/Products/Debug/AndroidUSBTethering.app/Contents/Resources/Scripts/install-helper.sh
       - name: Build DriverKit app
         run: |
           xcodebuild -project AndroidUSBTethering.xcodeproj \

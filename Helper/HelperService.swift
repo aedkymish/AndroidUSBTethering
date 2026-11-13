@@ -14,6 +14,7 @@ final class HelperService: NSObject, NSXPCListenerDelegate, TetheringHelperProto
     private let queue = DispatchQueue(label: "AndroidUSBTethering.helper")
     private let log = Logger(subsystem: HelperConstants.machServiceName, category: "helper")
     private let defaults = UserDefaults.standard
+    private let validator = ClientValidator()
     private lazy var monitor = USBDeviceMonitor(queue: queue)
     private var session: TetheringSession?
     private var status = HelperStatus()
@@ -47,11 +48,8 @@ final class HelperService: NSObject, NSXPCListenerDelegate, TetheringHelperProto
     // MARK: NSXPCListenerDelegate
 
     func listener(_ listener: NSXPCListener, shouldAcceptNewConnection connection: NSXPCConnection) -> Bool {
-        #if !DEBUG
-        // Only the signed app bundle may drive the helper.
-        connection.setCodeSigningRequirement(
-            "identifier \"\(HelperConstants.appBundleIdentifier)\" and anchor apple generic")
-        #endif
+        // Only the exact app this helper belongs to may drive it (works for ad-hoc signed releases).
+        guard validator.isValid(connection) else { return false }
         connection.exportedInterface = NSXPCInterface(with: TetheringHelperProtocol.self)
         connection.exportedObject = self
         connection.resume()

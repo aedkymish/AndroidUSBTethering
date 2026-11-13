@@ -53,6 +53,45 @@ See [docs/architecture.md](docs/architecture.md) for the design (MVC, class diag
 [docs/tethering-process.bpmn](docs/tethering-process.bpmn) for the BPMN 2.0 process model, and
 [docs/rndis-protocol.md](docs/rndis-protocol.md) for protocol notes.
 
+## Install a release
+
+Download the latest `.dmg` from [Releases](https://github.com/aedkymish/AndroidUSBTethering/releases)
+and drag the app to Applications.
+
+Releases are built by GitHub Actions (`.github/workflows/release.yml`) when a `v*` tag is pushed. They
+are **ad-hoc signed and not notarized**, because publishing them needs no paid Apple Developer
+account. macOS therefore blocks the first launch. Allow it in **System Settings → Privacy & Security
+→ Open Anyway**, or run:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/AndroidUSBTethering.app
+```
+
+If the helper cannot be registered from the app, install it from Terminal:
+
+```bash
+sudo sh "/Applications/AndroidUSBTethering.app/Contents/Resources/Scripts/install-helper.sh"
+```
+
+The script copies the helper to `/Library/PrivilegedHelperTools` (root-owned) and registers it with
+launchd. Run it again after updating the app. To remove it:
+
+```bash
+sudo sh "/Applications/AndroidUSBTethering.app/Contents/Resources/Scripts/install-helper.sh" --uninstall
+```
+
+The helper accepts XPC connections only from the exact app it belongs to. It checks the app's
+signature, its bundle path and its code hash, so this works without an Apple certificate.
+
+### Publishing a release
+
+1. Bump `MARKETING_VERSION` in `project.yml` and add a section to `CHANGELOG.md`.
+2. Tag and push:
+
+```bash
+git tag v0.3.0 && git push origin v0.3.0
+```
+
 ## Requirements
 
 - macOS 13 Ventura or later (Apple Silicon or Intel)

@@ -129,9 +129,21 @@ classDiagram
 ## Why a privileged helper?
 
 Opening the phone's USB interfaces, creating a `utun` interface, changing routes and publishing DNS
-all require root. The app stays unprivileged; the helper is registered with
-`SMAppService.daemon(plistName:)` and only accepts XPC connections from the signed app
-(`setCodeSigningRequirement` in release builds).
+all require root, so that work happens in the helper and the app stays unprivileged. The helper is
+installed in one of two ways:
+
+- by the app, with `SMAppService.daemon(plistName:)`;
+- manually, with `install-helper.sh`. The script copies the helper to `/Library/PrivilegedHelperTools`
+  and passes `--app <bundle>`.
+
+`ClientValidator` accepts an XPC client only if it passes all three checks:
+
+1. its running code has a valid signature;
+2. it was loaded from the expected app bundle;
+3. its cdhash equals the on-disk bundle's.
+
+The client is identified by its audit token. None of this needs an Apple-issued certificate, so
+ad-hoc signed GitHub releases are protected too.
 
 ## Data path
 

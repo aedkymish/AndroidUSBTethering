@@ -29,6 +29,10 @@ targetTemplates:
         excludes:
           - "Resources/Info.plist"
           - "Resources/*.entitlements"
+          - "Resources/Scripts/**"
+      - path: App/Resources/Scripts
+        type: folder
+        buildPhase: resources
       - path: Helper/com.aedkymish.AndroidUSBTethering.helper.plist
         buildPhase:
           copyFiles:

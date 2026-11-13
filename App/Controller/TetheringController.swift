@@ -67,6 +67,13 @@ final class TetheringController: ObservableObject {
         driver.deactivate()
     }
 
+    var manualInstallCommand: String { installer.manualInstallCommand }
+
+    func copyManualInstallCommand() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(installer.manualInstallCommand, forType: .string)
+    }
+
     func openApprovalSettings() {
         installer.openApprovalSettings()
     }
@@ -235,17 +242,19 @@ final class TetheringController: ObservableObject {
     }
 
     private func refresh() async {
-        model.helperState = installer.currentState()
-        guard model.helperState == .installed else {
-            model.helperReachable = false
-            return
-        }
+        let registered = installer.currentState()
         do {
+            // Also reachable when the helper was installed manually with install-helper.sh.
             model.status = try await helper.fetchStatus()
             model.helperReachable = true
+            model.helperState = .installed
         } catch {
             model.helperReachable = false
             helper.invalidate()
+            if case .failed = model.helperState, registered != .installed {
+                return // keep showing the failure and the manual install command
+            }
+            model.helperState = registered
         }
     }
 }

@@ -29,6 +29,12 @@ struct HelperInstaller {
         try service.unregister()
     }
 
+    /// Terminal command that installs the helper without SMAppService (see install-helper.sh).
+    var manualInstallCommand: String {
+        let script = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/Scripts/install-helper.sh").path
+        return "sudo sh \"\(script)\""
+    }
+
     func openApprovalSettings() {
         SMAppService.openSystemSettingsLoginItems()
     }

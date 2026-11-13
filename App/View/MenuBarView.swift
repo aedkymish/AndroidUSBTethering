@@ -18,8 +18,19 @@ struct MenuBarView: View {
                 helperPrompt("Allow the helper in System Settings → General → Login Items.",
                              action: "Open System Settings", perform: controller.openApprovalSettings)
             case let .failed(message):
-                helperPrompt("Helper installation failed: \(message)",
-                             action: "Try Again", perform: controller.installHelper)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("The helper could not be registered automatically (\(message)). Install it from Terminal instead:")
+                        .font(.callout)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(controller.manualInstallCommand)
+                        .font(.caption.monospaced())
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack {
+                        Button("Copy Command", action: controller.copyManualInstallCommand)
+                        Button("Try Again", action: controller.installHelper)
+                    }
+                }
             case .notInstalled, .unknown:
                 helperPrompt("A system helper is required to talk to the phone over USB.",
                              action: "Install Helper", perform: controller.installHelper)
