@@ -17,6 +17,8 @@ public enum USBChannelError: Error, LocalizedError {
 }
 
 /// `RNDISUSBChannel` backed by the user-space IOUSBHost framework.
+///
+/// The synchronous IOUSBHost calls are `NS_REFINED_FOR_SWIFT`, so Swift sees them with a `__` prefix.
 public final class IOUSBHostChannel: RNDISUSBChannel {
     private let controlInterface: IOUSBHostInterface
     private let dataInterface: IOUSBHostInterface
@@ -71,7 +73,7 @@ public final class IOUSBHostChannel: RNDISUSBChannel {
                                          wLength: UInt16(message.count))
         let buffer = NSMutableData(data: message)
         var transferred = 0
-        try controlInterface.sendDeviceRequest(request, data: buffer, bytesTransferred: &transferred,
+        try controlInterface.__sendDeviceRequest(request, data: buffer, bytesTransferred: &transferred,
                                                completionTimeout: Self.controlTimeout)
     }
 
@@ -82,7 +84,7 @@ public final class IOUSBHostChannel: RNDISUSBChannel {
                                          wLength: UInt16(maxLength))
         let buffer = NSMutableData(length: maxLength) ?? NSMutableData()
         var transferred = 0
-        try controlInterface.sendDeviceRequest(request, data: buffer, bytesTransferred: &transferred,
+        try controlInterface.__sendDeviceRequest(request, data: buffer, bytesTransferred: &transferred,
                                                completionTimeout: Self.controlTimeout)
         return Data(bytes: buffer.bytes, count: transferred)
     }
@@ -90,7 +92,7 @@ public final class IOUSBHostChannel: RNDISUSBChannel {
     public func writeBulk(_ data: Data) throws {
         let buffer = NSMutableData(data: data)
         var transferred = 0
-        try bulkOut.sendIORequest(with: buffer, bytesTransferred: &transferred,
+        try bulkOut.__sendIORequest(with: buffer, bytesTransferred: &transferred,
                                   completionTimeout: Self.bulkTimeout)
     }
 
@@ -104,7 +106,7 @@ public final class IOUSBHostChannel: RNDISUSBChannel {
                 var transferred = 0
                 do {
                     // A timeout of 0 waits indefinitely; close() destroys the pipe to unblock.
-                    try self.bulkIn.sendIORequest(with: buffer, bytesTransferred: &transferred,
+                    try self.bulkIn.__sendIORequest(with: buffer, bytesTransferred: &transferred,
                                                   completionTimeout: 0)
                     if transferred > 0 {
                         handler(.success(Data(bytes: buffer.bytes, count: transferred)))
@@ -116,7 +118,7 @@ public final class IOUSBHostChannel: RNDISUSBChannel {
             }
         }
         thread.name = "AndroidUSBTethering.bulk-in"
-        thread.qualityOfService = .userInitiated
+        thread.qualityOfService = QualityOfService.userInitiated
         thread.start()
     }
 
