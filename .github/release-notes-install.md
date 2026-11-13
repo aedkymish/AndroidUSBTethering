@@ -5,6 +5,7 @@ With Homebrew:
 
 ```bash
 brew tap aedkymish/androidusbtethering https://github.com/aedkymish/AndroidUSBTethering
+brew trust aedkymish/androidusbtethering
 brew install --cask android-usb-tethering
 ```
 

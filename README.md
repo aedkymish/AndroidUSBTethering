@@ -61,6 +61,12 @@ See [docs/architecture.md](docs/architecture.md) for the design (MVC, class diag
 brew tap aedkymish/androidusbtethering https://github.com/aedkymish/AndroidUSBTethering
 ```
 
+Recent Homebrew versions refuse to load casks from third-party taps until you trust them:
+
+```bash
+brew trust aedkymish/androidusbtethering
+```
+
 ```bash
 brew install --cask android-usb-tethering
 ```

@@ -36,6 +36,7 @@ jobs:
       - name: Tap this repository and audit the cask
         run: |
           brew tap aedkymish/androidusbtethering "$GITHUB_WORKSPACE"
+          brew trust aedkymish/androidusbtethering
           brew style --cask aedkymish/androidusbtethering/android-usb-tethering
           brew audit --cask aedkymish/androidusbtethering/android-usb-tethering
 
